@@ -47,6 +47,17 @@ The server provides RESTful API endpoints for:
 
 ## Deployment
 
-This API can be deployed as a standalone Node.js application or as serverless functions on platforms like Vercel.
+This API is designed for deployment on Railway as a standalone Node.js application.
 
-The `vercel.json` configuration is included for Vercel deployments.# EliteTCG_Api
+### Railway Deployment
+
+1. Connect your repository to Railway
+2. Set environment variables in Railway dashboard:
+   - Copy all variables from `.env.example`
+   - Update with production values
+3. Railway will automatically deploy using the `nixpacks.toml` configuration
+
+The `nixpacks.toml` file configures Railway to:
+- Use Node.js 20
+- Run `npm start` to start the server
+- Set production environment# EliteTCG_Api

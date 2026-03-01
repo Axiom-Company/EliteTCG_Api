@@ -99,7 +99,7 @@ router.delete('/:filename', authenticateToken, requireRole('super_admin', 'admin
     console.error('Delete error:', error);
     res.status(500).json({ error: 'Failed to delete image' });
   }
-);
+});
 
 // Error handling for multer
 router.use((error, req, res, next) => {

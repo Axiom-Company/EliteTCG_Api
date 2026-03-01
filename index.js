@@ -44,14 +44,16 @@ app.use(helmet({
 }));
 
 // CORS configuration
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'https://elitetcg.co.za',
+  'https://www.elitetcg.co.za',
+];
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (curl, mobile, etc.)
     if (!origin) return callback(null, true);
-    // Allow any localhost port in development
     if (/^http:\/\/localhost:\d+$/.test(origin)) return callback(null, true);
-    // Allow configured frontend URL
-    if (origin === process.env.FRONTEND_URL) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true
@@ -125,14 +127,15 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// Start server (skip in Vercel serverless environment)
-if (!process.env.VERCEL) {
-  app.listen(PORT, () => {
+// Start server (for standalone deployment)
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`
 ╔════════════════════════════════════════════╗
 ║                                            ║
 ║   EliteTCG API Server                      ║
-║   Running on http://localhost:${PORT}         ║
+║   Running on port ${PORT}                     ║
+║   Environment: ${process.env.NODE_ENV || 'development'}         ║
 ║                                            ║
 ║   Endpoints:                               ║
 ║   - GET  /api/health                       ║
