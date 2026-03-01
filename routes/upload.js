@@ -51,6 +51,7 @@ router.post('/image', authenticateToken, requireRole('super_admin', 'admin', 'ma
     console.error('Upload error:', error);
     res.status(500).json({ error: 'Failed to upload image' });
   }
+});
 
 // Upload single image (seller)
 router.post('/seller-image', authenticateCustomer, requireSeller, upload.single('image'), async (req, res) => {
@@ -64,6 +65,7 @@ router.post('/seller-image', authenticateCustomer, requireSeller, upload.single(
     console.error('Upload error:', error);
     res.status(500).json({ error: 'Failed to upload image' });
   }
+});
 
 // Upload multiple images (admin)
 router.post('/images', authenticateToken, requireRole('super_admin', 'admin', 'manager'), upload.array('images', 5), async (req, res) => {
