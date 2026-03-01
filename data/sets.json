@@ -1,0 +1,110 @@
+[
+  {
+    "id": "1769301186473",
+    "name": "Mega Evolution—Perfect Order",
+    "code": "POR",
+    "release_date": "2026-01-24",
+    "is_active": true,
+    "is_new": true,
+    "display_order": 1,
+    "image": "/uploads/product-1769301186467-473464029.png",
+    "created_at": "2026-01-25T00:33:06.473Z",
+    "updated_at": "2026-02-23T12:03:43.924Z"
+  },
+  {
+    "id": "1769301224621",
+    "name": "Mega Evolution—Ascended Heroes",
+    "code": "ASH",
+    "release_date": "2026-01-24",
+    "is_active": true,
+    "is_new": true,
+    "display_order": 2,
+    "image": "/uploads/product-1769301224615-757107761.png",
+    "created_at": "2026-01-25T00:33:44.621Z",
+    "updated_at": "2026-02-23T12:03:50.207Z"
+  },
+  {
+    "id": "1769301256001",
+    "name": "Mega Evolution—Phantasmal Flames",
+    "code": "PHF",
+    "release_date": "2026-01-24",
+    "is_active": true,
+    "is_new": false,
+    "display_order": 3,
+    "image": "/uploads/product-1769301255996-214396901.png",
+    "created_at": "2026-01-25T00:34:16.001Z",
+    "updated_at": "2026-02-23T12:03:54.539Z"
+  },
+  {
+    "id": "1769301277469",
+    "name": "Mega Evolution",
+    "code": "MGE",
+    "release_date": "2026-01-24",
+    "is_active": true,
+    "is_new": false,
+    "display_order": 4,
+    "image": "/uploads/product-1769301277464-143191675.png",
+    "created_at": "2026-01-25T00:34:37.469Z",
+    "updated_at": "2026-02-23T12:03:59.039Z"
+  },
+  {
+    "id": "1769301303697",
+    "name": "Scarlet & Violet—White Flare",
+    "code": "WHF",
+    "release_date": "2026-01-24",
+    "is_active": true,
+    "is_new": false,
+    "display_order": 5,
+    "image": "/uploads/product-1769301303693-459747959.png",
+    "created_at": "2026-01-25T00:35:03.697Z",
+    "updated_at": "2026-02-23T12:04:02.722Z"
+  },
+  {
+    "id": "1769301330979",
+    "name": "Scarlet & Violet—Black Bolt",
+    "code": "BLB",
+    "release_date": "2026-01-24",
+    "is_active": true,
+    "is_new": false,
+    "display_order": 6,
+    "image": "/uploads/product-1769301330975-90393099.png",
+    "created_at": "2026-01-25T00:35:30.979Z",
+    "updated_at": "2026-02-23T12:04:06.290Z"
+  },
+  {
+    "id": "1769301356580",
+    "name": "Scarlet & Violet—Destined Rivals",
+    "code": "DSR",
+    "release_date": "2026-01-24",
+    "is_active": true,
+    "is_new": false,
+    "display_order": 7,
+    "image": "/uploads/product-1769301356575-320158863.png",
+    "created_at": "2026-01-25T00:35:56.580Z",
+    "updated_at": "2026-02-23T12:04:10.456Z"
+  },
+  {
+    "id": "1769301380462",
+    "name": "Scarlet & Violet—Journey Together",
+    "code": "JRT",
+    "release_date": "2026-01-24",
+    "is_active": true,
+    "is_new": false,
+    "display_order": 8,
+    "image": "/uploads/product-1769301380458-625154007.png",
+    "created_at": "2026-01-25T00:36:20.462Z",
+    "updated_at": "2026-02-23T12:04:13.639Z"
+  },
+  {
+    "id": "1769301408030",
+    "name": "Scarlet & Violet—Prismatic Evolutions",
+    "code": "PRE",
+    "release_date": "2026-01-24",
+    "is_active": true,
+    "is_new": false,
+    "display_order": 9,
+    "image": "/uploads/product-1769301408024-239220834.png",
+    "created_at": "2026-01-25T00:36:48.030Z",
+    "updated_at": "2026-02-23T12:04:18.672Z"
+  }
+]

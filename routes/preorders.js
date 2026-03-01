@@ -1,0 +1,181 @@
+import { Router } from 'express';
+import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { supabaseAdmin } from '../config/supabase.js';
+
+const router = Router();
+
+// Mock preorders for development
+const mockPreorders = [
+  { id: '1', product_id: '1', release_date: '2025-03-28', deposit_percentage: 20, max_quantity: 100, current_quantity: 45, is_active: true, product: { name: 'Journey Together Booster Box', price: 144.99 } },
+  { id: '2', product_id: '2', release_date: '2025-05-30', deposit_percentage: 20, max_quantity: 100, current_quantity: 23, is_active: true, product: { name: 'Destined Rivals ETB', price: 49.99 } },
+  { id: '3', product_id: '3', release_date: '2025-08-08', deposit_percentage: 20, max_quantity: 50, current_quantity: 12, is_active: true, product: { name: 'Space-Time Smackdown Booster Box', price: 149.99 } },
+];
+
+// Get all preorders (public)
+router.get('/', async (req, res) => {
+  try {
+    const { active = 'true' } = req.query;
+
+    if (!supabaseAdmin) {
+      let filtered = [...mockPreorders];
+      if (active === 'true') filtered = filtered.filter(p => p.is_active);
+      return res.json({ preorders: filtered });
+    }
+
+    let query = supabaseAdmin
+      .from('preorders')
+      .select(`
+        *,
+        products (id, name, slug, price, images, category)
+      `)
+      .order('release_date', { ascending: true });
+
+    if (active === 'true') {
+      query = query.eq('is_active', true);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    res.json({ preorders: data });
+  } catch (error) {
+    console.error('Get preorders error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get single preorder
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!supabaseAdmin) {
+      const preorder = mockPreorders.find(p => p.id === id);
+      if (!preorder) return res.status(404).json({ error: 'Preorder not found' });
+      return res.json({ preorder });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('preorders')
+      .select(`
+        *,
+        products (*)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error || !data) {
+      return res.status(404).json({ error: 'Preorder not found' });
+    }
+
+    res.json({ preorder: data });
+  } catch (error) {
+    console.error('Get preorder error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Create preorder (admin only)
+router.post('/', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+  try {
+    if (!supabaseAdmin) {
+      return res.status(400).json({ error: 'Database not configured' });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('preorders')
+      .insert(req.body)
+      .select(`
+        *,
+        products (id, name, slug, price)
+      `)
+      .single();
+
+    if (error) throw error;
+
+    // Update product badge to preorder
+    await supabaseAdmin
+      .from('products')
+      .update({ badge: 'preorder' })
+      .eq('id', req.body.product_id);
+
+    res.status(201).json({ preorder: data });
+  } catch (error) {
+    console.error('Create preorder error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Update preorder (admin only)
+router.put('/:id', authenticateToken, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!supabaseAdmin) {
+      return res.status(400).json({ error: 'Database not configured' });
+    }
+
+    const updates = { ...req.body };
+    delete updates.id;
+    delete updates.created_at;
+    delete updates.product_id; // Don't allow changing product
+
+    const { data, error } = await supabaseAdmin
+      .from('preorders')
+      .update(updates)
+      .eq('id', id)
+      .select(`
+        *,
+        products (id, name, slug, price)
+      `)
+      .single();
+
+    if (error) throw error;
+
+    res.json({ preorder: data });
+  } catch (error) {
+    console.error('Update preorder error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Delete preorder (admin only)
+router.delete('/:id', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!supabaseAdmin) {
+      return res.status(400).json({ error: 'Database not configured' });
+    }
+
+    // Get preorder to find product_id
+    const { data: preorder } = await supabaseAdmin
+      .from('preorders')
+      .select('product_id')
+      .eq('id', id)
+      .single();
+
+    const { error } = await supabaseAdmin
+      .from('preorders')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    // Remove preorder badge from product
+    if (preorder) {
+      await supabaseAdmin
+        .from('products')
+        .update({ badge: 'none' })
+        .eq('id', preorder.product_id);
+    }
+
+    res.json({ message: 'Preorder deleted' });
+  } catch (error) {
+    console.error('Delete preorder error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+export default router;
