@@ -28,6 +28,12 @@ import sellerAnalyticsRoutes from './routes/sellerAnalytics.js';
 import reviewRoutes from './routes/reviews.js';
 import verificationRoutes from './routes/verification.js';
 import adminApiRoutes from './routes/adminApi.js';
+import payfastRoutes from './routes/payfast.js';
+import ordersRoutes from './routes/orders.js';
+import promotionRoutes from './routes/promotions.js';
+import shippingRoutes from './routes/shipping.js';
+import checkoutRoutes from './routes/checkout.js';
+import { supabaseAdmin } from './config/supabase.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -103,6 +109,11 @@ app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/seller/analytics', sellerAnalyticsRoutes);
 app.use('/api/marketplace/reviews', reviewRoutes);
 app.use('/api/sellers/verification', verificationRoutes);
+app.use('/api/payfast', payfastRoutes);
+app.use('/api/orders', ordersRoutes);
+app.use('/api/marketplace/promotions', promotionRoutes);
+app.use('/api/v1/shipping', shippingRoutes);
+app.use('/api/v1/checkout', checkoutRoutes);
 app.use('/api/v1', adminApiRoutes);
 
 // 404 handler
@@ -140,6 +151,19 @@ if (process.env.NODE_ENV !== 'test') {
 ╚════════════════════════════════════════════╝
     `);
 
+    // Background job: release expired listing reservations every 5 minutes
+    if (supabaseAdmin) {
+      setInterval(async () => {
+        try {
+          const { data, error } = await supabaseAdmin.rpc('release_expired_reservations');
+          if (!error && data > 0) {
+            console.log(`[Cleanup] Released ${data} expired reservation(s)`);
+          }
+        } catch (err) {
+          console.error('[Cleanup] Reservation cleanup error:', err.message);
+        }
+      }, 5 * 60 * 1000);
+    }
   });
 }
 
