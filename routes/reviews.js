@@ -12,6 +12,48 @@ const createReviewSchema = z.object({
   comment: z.string().max(1000, 'Comment must be 1000 characters or less').optional()
 });
 
+/**
+ * @openapi
+ * /marketplace/reviews:
+ *   post:
+ *     tags: [Reviews]
+ *     summary: Create a review for an order
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [order_id, rating]
+ *             properties:
+ *               order_id:
+ *                 type: string
+ *                 format: uuid
+ *               rating:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 5
+ *               comment:
+ *                 type: string
+ *                 maxLength: 1000
+ *     responses:
+ *       201:
+ *         description: Review created
+ *       400:
+ *         description: Validation failed or order not paid
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Only the buyer can review
+ *       404:
+ *         description: Order not found
+ *       409:
+ *         description: Review already exists for this order
+ *       500:
+ *         description: Server error
+ */
 // Create a review
 router.post('/', authenticateCustomer, async (req, res) => {
   try {
@@ -87,6 +129,34 @@ router.post('/', authenticateCustomer, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /marketplace/reviews/seller/{sellerId}:
+ *   get:
+ *     tags: [Reviews]
+ *     summary: Get reviews for a seller (public)
+ *     parameters:
+ *       - in: path
+ *         name: sellerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: Paginated seller reviews
+ *       500:
+ *         description: Server error
+ */
 // Get reviews for a seller (public)
 router.get('/seller/:sellerId', optionalCustomerAuth, async (req, res) => {
   try {
@@ -144,6 +214,28 @@ router.get('/seller/:sellerId', optionalCustomerAuth, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /marketplace/reviews/can-review/{orderId}:
+ *   get:
+ *     tags: [Reviews]
+ *     summary: Check if current user can review an order
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Review eligibility status
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Check if current user can review an order
 router.get('/can-review/:orderId', authenticateCustomer, async (req, res) => {
   try {

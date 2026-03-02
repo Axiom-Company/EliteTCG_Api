@@ -80,6 +80,64 @@ const createOrderSchema = z.object({
   shipping_address: shippingAddressSchema
 });
 
+/**
+ * @openapi
+ * /orders:
+ *   post:
+ *     tags: [Orders]
+ *     summary: Create an order and get PayFast payment URL
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [items, shipping_address]
+ *             properties:
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required: [productId, quantity]
+ *                   properties:
+ *                     productId:
+ *                       type: string
+ *                     quantity:
+ *                       type: integer
+ *               shipping_address:
+ *                 type: object
+ *                 required: [first_name, last_name, email, phone, street_address, city, province, postal_code]
+ *                 properties:
+ *                   first_name:
+ *                     type: string
+ *                   last_name:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ *                     format: email
+ *                   phone:
+ *                     type: string
+ *                   street_address:
+ *                     type: string
+ *                   apartment:
+ *                     type: string
+ *                   city:
+ *                     type: string
+ *                   province:
+ *                     type: string
+ *                   postal_code:
+ *                     type: string
+ *                   country:
+ *                     type: string
+ *                     default: South Africa
+ *     responses:
+ *       200:
+ *         description: Order created with PayFast payment URL
+ *       400:
+ *         description: Validation failed or insufficient stock
+ *       500:
+ *         description: Server error
+ */
 // Create order
 router.post('/', optionalCustomerAuth, async (req, res) => {
   try {
@@ -193,6 +251,41 @@ router.post('/', optionalCustomerAuth, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /orders/notify:
+ *   post:
+ *     tags: [Orders]
+ *     summary: PayFast ITN webhook for store orders
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/x-www-form-urlencoded:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               m_payment_id:
+ *                 type: string
+ *               payment_status:
+ *                 type: string
+ *               amount_gross:
+ *                 type: string
+ *               pf_payment_id:
+ *                 type: string
+ *               signature:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: ITN processed
+ *       400:
+ *         description: Invalid signature or amount mismatch
+ *       403:
+ *         description: Invalid source IP
+ *       404:
+ *         description: Order not found
+ *       500:
+ *         description: Server error
+ */
 // PayFast ITN webhook for store orders
 router.post('/notify', async (req, res) => {
   try {
@@ -280,6 +373,22 @@ router.post('/notify', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /orders/my/orders:
+ *   get:
+ *     tags: [Orders]
+ *     summary: Get current customer's orders
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of customer orders
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Get customer's orders (must be before /:id route)
 router.get('/my/orders', authenticateCustomer, async (req, res) => {
   try {
@@ -295,6 +404,28 @@ router.get('/my/orders', authenticateCustomer, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /orders/{id}:
+ *   get:
+ *     tags: [Orders]
+ *     summary: Get order by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Order details
+ *       403:
+ *         description: Not authorized
+ *       404:
+ *         description: Order not found
+ *       500:
+ *         description: Server error
+ */
 // Get order by ID
 router.get('/:id', optionalCustomerAuth, async (req, res) => {
   try {

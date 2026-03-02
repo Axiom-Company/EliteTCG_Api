@@ -53,6 +53,38 @@ async function uploadToStorage(buffer, folder) {
   return urlData.publicUrl;
 }
 
+/**
+ * @openapi
+ * /sellers/verification/submit:
+ *   post:
+ *     tags: [Verification]
+ *     summary: Submit verification documents (seller)
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [id_document, selfie]
+ *             properties:
+ *               id_document:
+ *                 type: string
+ *                 format: binary
+ *               selfie:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Documents submitted, status pending
+ *       400:
+ *         description: Missing required files
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // POST /submit - Submit verification documents (seller only)
 router.post('/submit', authenticateCustomer, requireSeller, upload.fields([
   { name: 'id_document', maxCount: 1 },
@@ -99,6 +131,24 @@ router.post('/submit', authenticateCustomer, requireSeller, upload.fields([
   }
 });
 
+/**
+ * @openapi
+ * /sellers/verification/status:
+ *   get:
+ *     tags: [Verification]
+ *     summary: Get own verification status (seller)
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Verification status
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Seller profile not found
+ *       500:
+ *         description: Server error
+ */
 // GET /status - Get own verification status (seller only)
 router.get('/status', authenticateCustomer, requireSeller, async (req, res) => {
   try {
@@ -136,6 +186,33 @@ router.get('/status', authenticateCustomer, requireSeller, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /sellers/verification/{sellerId}/approve:
+ *   post:
+ *     tags: [Verification]
+ *     summary: Approve seller verification (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sellerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Seller verified
+ *       400:
+ *         description: Invalid seller ID format
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Seller not found
+ *       500:
+ *         description: Server error
+ */
 // POST /:sellerId/approve - Admin approve verification
 router.post('/:sellerId/approve', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
   try {
@@ -170,6 +247,43 @@ router.post('/:sellerId/approve', authenticateToken, requireRole('super_admin', 
   }
 });
 
+/**
+ * @openapi
+ * /sellers/verification/{sellerId}/reject:
+ *   post:
+ *     tags: [Verification]
+ *     summary: Reject seller verification (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sellerId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [reason]
+ *             properties:
+ *               reason:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Verification rejected
+ *       400:
+ *         description: Invalid seller ID or missing reason
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Seller not found
+ *       500:
+ *         description: Server error
+ */
 // POST /:sellerId/reject - Admin reject verification
 router.post('/:sellerId/reject', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
   try {

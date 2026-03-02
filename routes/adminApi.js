@@ -26,6 +26,20 @@ function saveOrders(orders) {
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
+/**
+ * @openapi
+ * /v1/dashboard/admin:
+ *   get:
+ *     tags: [Admin API]
+ *     summary: Get admin dashboard stats and recent orders
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Dashboard stats, revenue by day, status breakdown, recent orders
+ *       401:
+ *         description: Unauthorized
+ */
 router.get('/dashboard/admin', (req, res) => {
   const orders = loadOrders();
 
@@ -98,6 +112,40 @@ router.get('/dashboard/admin', (req, res) => {
 
 // ── Orders ────────────────────────────────────────────────────────────────────
 
+/**
+ * @openapi
+ * /v1/orders/admin:
+ *   get:
+ *     tags: [Admin API]
+ *     summary: Get all orders (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search by order number, email, or name
+ *     responses:
+ *       200:
+ *         description: Paginated orders
+ *       401:
+ *         description: Unauthorized
+ */
 router.get('/orders/admin', (req, res) => {
   const { status, page = 1, limit = 20, search } = req.query;
   let orders = loadOrders().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -122,6 +170,28 @@ router.get('/orders/admin', (req, res) => {
   res.json({ orders: paginated, total, page: pageNum, pages: Math.ceil(total / limitNum) });
 });
 
+/**
+ * @openapi
+ * /v1/orders/admin/{id}:
+ *   get:
+ *     tags: [Admin API]
+ *     summary: Get order by ID (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Order details
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Order not found
+ */
 router.get('/orders/admin/:id', (req, res) => {
   const orders = loadOrders();
   const order = orders.find(o => o.id === req.params.id);
@@ -129,6 +199,38 @@ router.get('/orders/admin/:id', (req, res) => {
   res.json(order);
 });
 
+/**
+ * @openapi
+ * /v1/orders/admin/{id}/status:
+ *   put:
+ *     tags: [Admin API]
+ *     summary: Update order status (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [status]
+ *             properties:
+ *               status:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Order status updated
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Order not found
+ */
 router.put('/orders/admin/:id/status', (req, res) => {
   const { status } = req.body;
   const orders = loadOrders();
@@ -139,6 +241,38 @@ router.put('/orders/admin/:id/status', (req, res) => {
   res.json(orders[idx]);
 });
 
+/**
+ * @openapi
+ * /v1/orders/admin/{id}/tracking:
+ *   put:
+ *     tags: [Admin API]
+ *     summary: Update order tracking number (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [tracking_number]
+ *             properties:
+ *               tracking_number:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Tracking number updated
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Order not found
+ */
 router.put('/orders/admin/:id/tracking', (req, res) => {
   const { tracking_number } = req.body;
   const orders = loadOrders();
@@ -149,6 +283,38 @@ router.put('/orders/admin/:id/tracking', (req, res) => {
   res.json(orders[idx]);
 });
 
+/**
+ * @openapi
+ * /v1/orders/admin/{id}/notes:
+ *   put:
+ *     tags: [Admin API]
+ *     summary: Update order notes (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [notes]
+ *             properties:
+ *               notes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Notes updated
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Order not found
+ */
 router.put('/orders/admin/:id/notes', (req, res) => {
   const { notes } = req.body;
   const orders = loadOrders();

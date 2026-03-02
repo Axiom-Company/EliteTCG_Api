@@ -1,6 +1,6 @@
 {
   "name": "elitetcg-api",
-  "version": "1.0.0", 
+  "version": "1.0.0",
   "description": "EliteTCG Backend API - Standalone API Server",
   "main": "index.js",
   "type": "module",
@@ -19,6 +19,8 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
     "sharp": "^0.34.5",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "uuid": "^9.0.1",
     "zod": "^3.22.4"
   }

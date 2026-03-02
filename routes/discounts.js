@@ -11,6 +11,38 @@ const mockDiscounts = [
   { id: '3', code: 'WELCOME15', description: '15% off for new customers', discount_type: 'percentage', discount_value: 15, minimum_order: null, is_active: true, usage_count: 89, usage_limit: 500 },
 ];
 
+/**
+ * @openapi
+ * /discounts/validate:
+ *   post:
+ *     tags: [Discounts]
+ *     summary: Validate a discount code
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [code]
+ *             properties:
+ *               code:
+ *                 type: string
+ *               order_total:
+ *                 type: number
+ *               product_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Discount valid, returns discount amount
+ *       400:
+ *         description: Discount code required or minimum order not met
+ *       404:
+ *         description: Invalid discount code
+ *       500:
+ *         description: Server error
+ */
 // Validate discount code (public)
 router.post('/validate', async (req, res) => {
   try {
@@ -112,6 +144,22 @@ router.post('/validate', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /discounts:
+ *   get:
+ *     tags: [Discounts]
+ *     summary: Get all discounts (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of discounts
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Get all discounts (admin only)
 router.get('/', authenticateToken, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
   try {
@@ -133,6 +181,53 @@ router.get('/', authenticateToken, requireRole('super_admin', 'admin', 'manager'
   }
 });
 
+/**
+ * @openapi
+ * /discounts:
+ *   post:
+ *     tags: [Discounts]
+ *     summary: Create a discount (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [code, discount_type, discount_value]
+ *             properties:
+ *               code:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               discount_type:
+ *                 type: string
+ *                 enum: [percentage, fixed]
+ *               discount_value:
+ *                 type: number
+ *               minimum_order:
+ *                 type: number
+ *               maximum_discount:
+ *                 type: number
+ *               usage_limit:
+ *                 type: integer
+ *               starts_at:
+ *                 type: string
+ *                 format: date-time
+ *               expires_at:
+ *                 type: string
+ *                 format: date-time
+ *               is_active:
+ *                 type: boolean
+ *     responses:
+ *       201:
+ *         description: Discount created
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Create discount (admin only)
 router.post('/', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
   try {
@@ -160,6 +255,45 @@ router.post('/', authenticateToken, requireRole('super_admin', 'admin'), async (
   }
 });
 
+/**
+ * @openapi
+ * /discounts/{id}:
+ *   put:
+ *     tags: [Discounts]
+ *     summary: Update a discount (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               code:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               discount_type:
+ *                 type: string
+ *               discount_value:
+ *                 type: number
+ *               is_active:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Discount updated
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Update discount (admin only)
 router.put('/:id', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
   try {
@@ -194,6 +328,28 @@ router.put('/:id', authenticateToken, requireRole('super_admin', 'admin'), async
   }
 });
 
+/**
+ * @openapi
+ * /discounts/{id}:
+ *   delete:
+ *     tags: [Discounts]
+ *     summary: Delete a discount (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Discount deleted
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Delete discount (admin only)
 router.delete('/:id', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
   try {

@@ -24,8 +24,38 @@ const SENDER = {
 };
 
 /**
- * POST /api/v1/shipping/quote
- * Body: { address_line1, city, province, postal_code, total_weight_grams? }
+ * @openapi
+ * /v1/shipping/quote:
+ *   post:
+ *     tags: [Shipping]
+ *     summary: Get a shipping quote from Courier Guy
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [address_line1, city, province, postal_code]
+ *             properties:
+ *               address_line1:
+ *                 type: string
+ *               city:
+ *                 type: string
+ *               province:
+ *                 type: string
+ *               postal_code:
+ *                 type: string
+ *               total_weight_grams:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Shipping quote with courier and customer cost
+ *       400:
+ *         description: Missing required address fields
+ *       404:
+ *         description: No shipping rates available
+ *       500:
+ *         description: Server error
  */
 router.post('/quote', async (req, res) => {
   try {

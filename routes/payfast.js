@@ -35,6 +35,60 @@ function generateOrderNumber() {
   return `ETM-${timestamp}-${random}`;
 }
 
+/**
+ * @openapi
+ * /payfast/create-payment:
+ *   post:
+ *     tags: [PayFast]
+ *     summary: Create a marketplace order and get PayFast payment URL
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [listing_id, buyer_email, buyer_name]
+ *             properties:
+ *               listing_id:
+ *                 type: string
+ *                 format: uuid
+ *               quantity:
+ *                 type: integer
+ *                 default: 1
+ *               buyer_email:
+ *                 type: string
+ *                 format: email
+ *               buyer_name:
+ *                 type: string
+ *               buyer_phone:
+ *                 type: string
+ *               shipping_address:
+ *                 type: object
+ *                 properties:
+ *                   line1:
+ *                     type: string
+ *                   line2:
+ *                     type: string
+ *                   city:
+ *                     type: string
+ *                   province:
+ *                     type: string
+ *                   postal_code:
+ *                     type: string
+ *                   country:
+ *                     type: string
+ *     responses:
+ *       200:
+ *         description: Order created with PayFast payment URL
+ *       400:
+ *         description: Validation failed or insufficient stock
+ *       404:
+ *         description: Listing not found
+ *       409:
+ *         description: Listing no longer available
+ *       500:
+ *         description: Server error
+ */
 // Create order and get payment URL
 router.post('/create-payment', optionalCustomerAuth, async (req, res) => {
   try {
@@ -185,6 +239,41 @@ router.post('/create-payment', optionalCustomerAuth, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /payfast/notify:
+ *   post:
+ *     tags: [PayFast]
+ *     summary: PayFast ITN webhook for marketplace orders
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/x-www-form-urlencoded:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               m_payment_id:
+ *                 type: string
+ *               payment_status:
+ *                 type: string
+ *               amount_gross:
+ *                 type: string
+ *               pf_payment_id:
+ *                 type: string
+ *               signature:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: ITN processed
+ *       400:
+ *         description: Invalid signature or amount mismatch
+ *       403:
+ *         description: Invalid source IP
+ *       404:
+ *         description: Order not found
+ *       500:
+ *         description: Server error
+ */
 // PayFast ITN (Instant Transaction Notification) webhook
 router.post('/notify', async (req, res) => {
   try {
@@ -322,18 +411,60 @@ router.post('/notify', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /payfast/return:
+ *   get:
+ *     tags: [PayFast]
+ *     summary: Payment success return URL (redirects to frontend)
+ *     responses:
+ *       302:
+ *         description: Redirect to success page
+ */
 // Payment success return URL
 router.get('/return', (req, res) => {
   // Redirect to success page
   res.redirect('/marketplace/payment/success');
 });
 
+/**
+ * @openapi
+ * /payfast/cancel:
+ *   get:
+ *     tags: [PayFast]
+ *     summary: Payment cancel return URL (redirects to frontend)
+ *     responses:
+ *       302:
+ *         description: Redirect to cancel page
+ */
 // Payment cancel return URL
 router.get('/cancel', (req, res) => {
   // Redirect to cancel page
   res.redirect('/marketplace/payment/cancel');
 });
 
+/**
+ * @openapi
+ * /payfast/order/{orderId}:
+ *   get:
+ *     tags: [PayFast]
+ *     summary: Get marketplace order status
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Order details
+ *       403:
+ *         description: Not authorized
+ *       404:
+ *         description: Order not found
+ *       500:
+ *         description: Server error
+ */
 // Get order status (for buyer)
 router.get('/order/:orderId', optionalCustomerAuth, async (req, res) => {
   try {
@@ -386,6 +517,34 @@ router.get('/order/:orderId', optionalCustomerAuth, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /payfast/order/{orderId}/confirm-delivery:
+ *   patch:
+ *     tags: [PayFast]
+ *     summary: Buyer confirms order delivery
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Delivery confirmed
+ *       400:
+ *         description: Invalid order status for confirmation
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Not authorized
+ *       404:
+ *         description: Order not found
+ *       500:
+ *         description: Server error
+ */
 // Buyer confirms delivery
 router.patch('/order/:orderId/confirm-delivery', authenticateCustomer, async (req, res) => {
   try {

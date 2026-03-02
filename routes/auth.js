@@ -15,6 +15,35 @@ const mockAdminUser = {
   is_active: true
 };
 
+/**
+ * @openapi
+ * /auth/login:
+ *   post:
+ *     tags: [Admin Auth]
+ *     summary: Admin login
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful, returns JWT token
+ *       400:
+ *         description: Email and password required
+ *       401:
+ *         description: Invalid credentials
+ *       500:
+ *         description: Server error
+ */
 // Login
 router.post('/login', async (req, res) => {
   try {
@@ -75,6 +104,22 @@ router.post('/login', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /auth/me:
+ *   get:
+ *     tags: [Admin Auth]
+ *     summary: Get current admin user
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Admin user profile
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Get current user
 router.get('/me', authenticateToken, async (req, res) => {
   try {
@@ -84,6 +129,39 @@ router.get('/me', authenticateToken, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /auth/change-password:
+ *   post:
+ *     tags: [Admin Auth]
+ *     summary: Change admin password
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [currentPassword, newPassword]
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 8
+ *     responses:
+ *       200:
+ *         description: Password updated
+ *       400:
+ *         description: Validation failed
+ *       401:
+ *         description: Current password incorrect
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
 // Change password
 router.post('/change-password', authenticateToken, async (req, res) => {
   try {

@@ -39,6 +39,35 @@ const uploadToSupabase = async (buffer, mimetype, originalname, folder = 'produc
   return { url: urlData.publicUrl, filename };
 };
 
+/**
+ * @openapi
+ * /upload/image:
+ *   post:
+ *     tags: [Uploads]
+ *     summary: Upload a single image (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [image]
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Image uploaded, returns URL
+ *       400:
+ *         description: No image provided or invalid file type
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Upload failed
+ */
 // Upload single image (admin)
 router.post('/image', authenticateToken, requireRole('super_admin', 'admin', 'manager'), upload.single('image'), async (req, res) => {
   try {
@@ -53,6 +82,35 @@ router.post('/image', authenticateToken, requireRole('super_admin', 'admin', 'ma
   }
 });
 
+/**
+ * @openapi
+ * /upload/seller-image:
+ *   post:
+ *     tags: [Uploads]
+ *     summary: Upload a single image (seller)
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [image]
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Image uploaded, returns URL
+ *       400:
+ *         description: No image provided or invalid file type
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Upload failed
+ */
 // Upload single image (seller)
 router.post('/seller-image', authenticateCustomer, requireSeller, upload.single('image'), async (req, res) => {
   try {
@@ -67,6 +125,37 @@ router.post('/seller-image', authenticateCustomer, requireSeller, upload.single(
   }
 });
 
+/**
+ * @openapi
+ * /upload/images:
+ *   post:
+ *     tags: [Uploads]
+ *     summary: Upload multiple images (admin, max 5)
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [images]
+ *             properties:
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     responses:
+ *       200:
+ *         description: Images uploaded, returns URLs
+ *       400:
+ *         description: No images provided
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Upload failed
+ */
 // Upload multiple images (admin)
 router.post('/images', authenticateToken, requireRole('super_admin', 'admin', 'manager'), upload.array('images', 5), async (req, res) => {
   try {
@@ -86,6 +175,29 @@ router.post('/images', authenticateToken, requireRole('super_admin', 'admin', 'm
   }
 });
 
+/**
+ * @openapi
+ * /upload/{filename}:
+ *   delete:
+ *     tags: [Uploads]
+ *     summary: Delete an image from storage (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: filename
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Filename or path (e.g. products/image.jpg)
+ *     responses:
+ *       200:
+ *         description: Image deleted
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Delete failed
+ */
 // Delete image from Supabase Storage
 router.delete('/:filename', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
   try {

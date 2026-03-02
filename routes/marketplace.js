@@ -52,6 +52,61 @@ const formatListing = (listing, sellerProfile = null) => ({
   } : null
 });
 
+/**
+ * @openapi
+ * /marketplace/listings:
+ *   get:
+ *     tags: [Marketplace]
+ *     summary: Get all marketplace listings (public)
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: condition
+ *         schema:
+ *           type: string
+ *           enum: [mint, near_mint, excellent, good, played, poor]
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *           enum: [singles, sealed, accessories]
+ *       - in: query
+ *         name: min_price
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: max_price
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: seller_id
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [newest, oldest, price_low, price_high, popular]
+ *           default: newest
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: Paginated list of listings
+ *       500:
+ *         description: Server error
+ */
 // Get all listings (public, with filters)
 router.get('/listings', optionalCustomerAuth, async (req, res) => {
   try {
@@ -208,6 +263,26 @@ router.get('/listings', optionalCustomerAuth, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /marketplace/listings/{id}:
+ *   get:
+ *     tags: [Marketplace]
+ *     summary: Get listing by ID (public)
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Listing details with seller info
+ *       404:
+ *         description: Listing not found
+ *       500:
+ *         description: Server error
+ */
 // Get single listing (public)
 router.get('/listings/:id', optionalCustomerAuth, async (req, res) => {
   try {
@@ -268,6 +343,69 @@ router.get('/listings/:id', optionalCustomerAuth, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /marketplace/listings:
+ *   post:
+ *     tags: [Marketplace]
+ *     summary: Create a listing (seller)
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [title, condition, price]
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 minLength: 5
+ *               description:
+ *                 type: string
+ *               card_name:
+ *                 type: string
+ *               set_name:
+ *                 type: string
+ *               card_number:
+ *                 type: string
+ *               condition:
+ *                 type: string
+ *                 enum: [mint, near_mint, excellent, good, played, poor]
+ *               language:
+ *                 type: string
+ *                 default: English
+ *               is_graded:
+ *                 type: boolean
+ *               grading_company:
+ *                 type: string
+ *               grade:
+ *                 type: string
+ *               price:
+ *                 type: number
+ *               quantity:
+ *                 type: integer
+ *                 default: 1
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               category:
+ *                 type: string
+ *                 enum: [singles, sealed, accessories]
+ *               is_negotiable:
+ *                 type: boolean
+ *     responses:
+ *       201:
+ *         description: Listing created
+ *       400:
+ *         description: Validation failed
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Create listing (seller only)
 router.post('/listings', authenticateCustomer, requireSeller, async (req, res) => {
   try {
@@ -329,6 +467,51 @@ router.post('/listings', authenticateCustomer, requireSeller, async (req, res) =
   }
 });
 
+/**
+ * @openapi
+ * /marketplace/listings/{id}:
+ *   put:
+ *     tags: [Marketplace]
+ *     summary: Update a listing (owner only)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               price:
+ *                 type: number
+ *               condition:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Listing updated
+ *       400:
+ *         description: Validation failed
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Not authorized to edit this listing
+ *       500:
+ *         description: Server error
+ */
 // Update listing (owner only)
 router.put('/listings/:id', authenticateCustomer, requireSeller, async (req, res) => {
   try {
@@ -397,6 +580,30 @@ router.put('/listings/:id', authenticateCustomer, requireSeller, async (req, res
   }
 });
 
+/**
+ * @openapi
+ * /marketplace/listings/{id}:
+ *   delete:
+ *     tags: [Marketplace]
+ *     summary: Delete a listing (owner only, soft delete)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Listing deleted
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Not authorized
+ *       500:
+ *         description: Server error
+ */
 // Delete listing (owner only) - soft delete
 router.delete('/listings/:id', authenticateCustomer, requireSeller, async (req, res) => {
   try {
@@ -433,6 +640,43 @@ router.delete('/listings/:id', authenticateCustomer, requireSeller, async (req, 
   }
 });
 
+/**
+ * @openapi
+ * /marketplace/listings/{id}/status:
+ *   patch:
+ *     tags: [Marketplace]
+ *     summary: Pause or unpause a listing (owner only)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [status]
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [active, paused]
+ *     responses:
+ *       200:
+ *         description: Status updated
+ *       400:
+ *         description: Invalid status
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Not authorized
+ *       500:
+ *         description: Server error
+ */
 // Pause/unpause listing (owner only)
 router.patch('/listings/:id/status', authenticateCustomer, requireSeller, async (req, res) => {
   try {
@@ -486,6 +730,24 @@ router.patch('/listings/:id/status', authenticateCustomer, requireSeller, async 
   }
 });
 
+/**
+ * @openapi
+ * /marketplace/listings/{id}/view:
+ *   post:
+ *     tags: [Marketplace]
+ *     summary: Track a listing view (rate limited per IP)
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: View tracked
+ *       500:
+ *         description: Server error
+ */
 // Track view (rate limited: 1 view per IP per listing per hour)
 router.post('/listings/:id/view', optionalCustomerAuth, async (req, res) => {
   try {
@@ -554,6 +816,38 @@ router.post('/listings/:id/view', optionalCustomerAuth, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /marketplace/my-listings:
+ *   get:
+ *     tags: [Marketplace]
+ *     summary: Get current seller's listings
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [active, paused, sold]
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: Paginated seller listings
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Get seller's own listings
 router.get('/my-listings', authenticateCustomer, requireSeller, async (req, res) => {
   try {

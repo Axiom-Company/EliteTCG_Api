@@ -18,6 +18,18 @@ const mockConfig = {
   preorder_deposit_percentage: '20',
 };
 
+/**
+ * @openapi
+ * /config:
+ *   get:
+ *     tags: [Config]
+ *     summary: Get all site configuration
+ *     responses:
+ *       200:
+ *         description: Key-value config object
+ *       500:
+ *         description: Server error
+ */
 // Get all config (public - for frontend)
 router.get('/', async (req, res) => {
   try {
@@ -53,6 +65,26 @@ router.get('/', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /config/{key}:
+ *   get:
+ *     tags: [Config]
+ *     summary: Get a single config value
+ *     parameters:
+ *       - in: path
+ *         name: key
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Config value
+ *       404:
+ *         description: Config not found
+ *       500:
+ *         description: Server error
+ */
 // Get single config value
 router.get('/:key', async (req, res) => {
   try {
@@ -82,6 +114,39 @@ router.get('/:key', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /config/{key}:
+ *   put:
+ *     tags: [Config]
+ *     summary: Update a config value (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: key
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               value:
+ *                 type: string
+ *               is_active:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Config updated
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Update config (admin only)
 router.put('/:key', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
   try {
@@ -113,6 +178,44 @@ router.put('/:key', authenticateToken, requireRole('super_admin', 'admin'), asyn
   }
 });
 
+/**
+ * @openapi
+ * /config:
+ *   post:
+ *     tags: [Config]
+ *     summary: Create a new config entry (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [key, value]
+ *             properties:
+ *               key:
+ *                 type: string
+ *               value:
+ *                 type: string
+ *               type:
+ *                 type: string
+ *                 default: string
+ *               description:
+ *                 type: string
+ *               is_active:
+ *                 type: boolean
+ *                 default: true
+ *     responses:
+ *       201:
+ *         description: Config created
+ *       400:
+ *         description: Key and value required
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Create new config (admin only)
 router.post('/', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
   try {
@@ -142,6 +245,31 @@ router.post('/', authenticateToken, requireRole('super_admin', 'admin'), async (
   }
 });
 
+/**
+ * @openapi
+ * /config:
+ *   put:
+ *     tags: [Config]
+ *     summary: Bulk update config values (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             additionalProperties:
+ *               type: string
+ *             description: Object of key-value pairs to update
+ *     responses:
+ *       200:
+ *         description: Config updated
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Bulk update config (admin only)
 router.put('/', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
   try {

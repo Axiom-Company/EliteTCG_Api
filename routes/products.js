@@ -12,6 +12,52 @@ const formatProduct = (p) => {
   return { ...p, inventory: inv };
 };
 
+/**
+ * @openapi
+ * /products:
+ *   get:
+ *     tags: [Products]
+ *     summary: Get all products
+ *     parameters:
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: set_id
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: featured
+ *         schema:
+ *           type: string
+ *           enum: ['true', 'false']
+ *       - in: query
+ *         name: active
+ *         schema:
+ *           type: string
+ *           enum: ['all']
+ *         description: Pass "all" to include inactive products
+ *       - in: query
+ *         name: badge
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: List of products with total count
+ *       500:
+ *         description: Server error
+ */
 // GET all products
 router.get('/', async (req, res) => {
   try {
@@ -41,6 +87,27 @@ router.get('/', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /products/{id}:
+ *   get:
+ *     tags: [Products]
+ *     summary: Get product by ID or slug
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product ID or slug
+ *     responses:
+ *       200:
+ *         description: Product details
+ *       404:
+ *         description: Product not found
+ *       500:
+ *         description: Server error
+ */
 // GET single product by slug or id
 router.get('/:id', async (req, res) => {
   try {
@@ -61,6 +128,63 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /products:
+ *   post:
+ *     tags: [Products]
+ *     summary: Create a product (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, price]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               slug:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               price:
+ *                 type: number
+ *               compare_at_price:
+ *                 type: number
+ *               currency:
+ *                 type: string
+ *                 default: ZAR
+ *               category:
+ *                 type: string
+ *               badge:
+ *                 type: string
+ *               set_id:
+ *                 type: string
+ *               is_active:
+ *                 type: boolean
+ *               is_featured:
+ *                 type: boolean
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               sku:
+ *                 type: string
+ *               initial_quantity:
+ *                 type: integer
+ *               low_stock_threshold:
+ *                 type: integer
+ *     responses:
+ *       201:
+ *         description: Product created
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // POST create product
 router.post('/', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
   try {
@@ -118,6 +242,49 @@ router.post('/', authenticateToken, requireRole('super_admin', 'admin'), async (
   }
 });
 
+/**
+ * @openapi
+ * /products/{id}:
+ *   put:
+ *     tags: [Products]
+ *     summary: Update a product (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               price:
+ *                 type: number
+ *               description:
+ *                 type: string
+ *               is_active:
+ *                 type: boolean
+ *               is_featured:
+ *                 type: boolean
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: Product updated
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // PUT update product
 router.put('/:id', authenticateToken, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
   try {
@@ -140,6 +307,28 @@ router.put('/:id', authenticateToken, requireRole('super_admin', 'admin', 'manag
   }
 });
 
+/**
+ * @openapi
+ * /products/{id}:
+ *   delete:
+ *     tags: [Products]
+ *     summary: Delete a product and its images (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Product deleted
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // DELETE product — also removes images from Supabase Storage
 router.delete('/:id', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
   try {
@@ -179,6 +368,43 @@ router.delete('/:id', authenticateToken, requireRole('super_admin', 'admin'), as
   }
 });
 
+/**
+ * @openapi
+ * /products/{id}/inventory:
+ *   patch:
+ *     tags: [Products]
+ *     summary: Update product inventory (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               quantity:
+ *                 type: integer
+ *                 description: Set absolute quantity
+ *               adjustment:
+ *                 type: integer
+ *                 description: Relative adjustment (+/-)
+ *               low_stock_threshold:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Inventory updated
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // PATCH inventory
 router.patch('/:id/inventory', authenticateToken, requireRole('super_admin', 'admin', 'manager', 'staff'), async (req, res) => {
   try {

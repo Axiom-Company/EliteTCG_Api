@@ -4,6 +4,30 @@ import { supabaseAdmin } from '../config/supabase.js';
 
 const router = Router();
 
+/**
+ * @openapi
+ * /categories:
+ *   get:
+ *     tags: [Categories]
+ *     summary: Get all categories
+ *     parameters:
+ *       - in: query
+ *         name: active
+ *         schema:
+ *           type: string
+ *           enum: ['all']
+ *         description: Pass "all" to include inactive categories
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *     responses:
+ *       200:
+ *         description: List of categories
+ *       500:
+ *         description: Server error
+ */
 // GET all categories
 router.get('/', async (req, res) => {
   try {
@@ -27,6 +51,27 @@ router.get('/', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /categories/{id}:
+ *   get:
+ *     tags: [Categories]
+ *     summary: Get category by ID or slug
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Category ID or slug
+ *     responses:
+ *       200:
+ *         description: Category details
+ *       404:
+ *         description: Category not found
+ *       500:
+ *         description: Server error
+ */
 // GET single category by id or slug
 router.get('/:id', async (req, res) => {
   try {
@@ -45,6 +90,42 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /categories:
+ *   post:
+ *     tags: [Categories]
+ *     summary: Create a category (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               slug:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               icon:
+ *                 type: string
+ *               is_active:
+ *                 type: boolean
+ *               image:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Category created
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // POST create category
 router.post('/', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
   try {
@@ -83,6 +164,47 @@ router.post('/', authenticateToken, requireRole('super_admin', 'admin'), async (
   }
 });
 
+/**
+ * @openapi
+ * /categories/{id}:
+ *   put:
+ *     tags: [Categories]
+ *     summary: Update a category (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               slug:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               icon:
+ *                 type: string
+ *               is_active:
+ *                 type: boolean
+ *               image:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Category updated
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // PUT update category
 router.put('/:id', authenticateToken, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
   try {
@@ -104,6 +226,28 @@ router.put('/:id', authenticateToken, requireRole('super_admin', 'admin', 'manag
   }
 });
 
+/**
+ * @openapi
+ * /categories/{id}:
+ *   delete:
+ *     tags: [Categories]
+ *     summary: Delete a category (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Category deleted
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // DELETE category
 router.delete('/:id', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
   try {
@@ -117,6 +261,39 @@ router.delete('/:id', authenticateToken, requireRole('super_admin', 'admin'), as
   }
 });
 
+/**
+ * @openapi
+ * /categories/reorder:
+ *   post:
+ *     tags: [Categories]
+ *     summary: Reorder categories (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [orders]
+ *             properties:
+ *               orders:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     display_order:
+ *                       type: integer
+ *     responses:
+ *       200:
+ *         description: Categories reordered
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // POST reorder categories
 router.post('/reorder', authenticateToken, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
   try {

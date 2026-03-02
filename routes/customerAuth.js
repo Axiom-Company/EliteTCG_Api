@@ -1,8 +1,7 @@
 import { Router } from 'express';
-import bcrypt from 'bcrypt';
 import { z } from 'zod';
-import { generateCustomerToken, authenticateCustomer } from '../middleware/auth.js';
-import { supabaseAdmin } from '../config/supabase.js';
+import { authenticateCustomer } from '../middleware/auth.js';
+import { supabase, supabaseAdmin } from '../config/supabase.js';
 
 const router = Router();
 
@@ -50,6 +49,44 @@ const getSellerProfile = async (customerId) => {
   return data;
 };
 
+/**
+ * @openapi
+ * /customer/register:
+ *   post:
+ *     tags: [Customer Auth]
+ *     summary: Register a new customer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password, first_name, last_name]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 minLength: 8
+ *               first_name:
+ *                 type: string
+ *               last_name:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               accepts_marketing:
+ *                 type: boolean
+ *     responses:
+ *       201:
+ *         description: Account created
+ *       400:
+ *         description: Validation failed
+ *       409:
+ *         description: Email already registered
+ *       500:
+ *         description: Server error
+ */
 // Register new customer
 router.post('/register', async (req, res) => {
   try {
@@ -64,8 +101,8 @@ router.post('/register', async (req, res) => {
 
     const { email, password, first_name, last_name, phone, accepts_marketing } = validation.data;
 
-    // Check if customer already exists
-    if (supabaseAdmin) {
+    if (supabase && supabaseAdmin) {
+      // Check if customer already exists in our table
       const { data: existing } = await supabaseAdmin
         .from('customers')
         .select('id')
@@ -75,49 +112,84 @@ router.post('/register', async (req, res) => {
       if (existing) {
         return res.status(409).json({ error: 'Email already registered' });
       }
+
+      // Create auth user via Supabase Auth (anon client)
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: email.toLowerCase(),
+        password,
+        options: {
+          data: {
+            first_name,
+            last_name,
+            phone
+          }
+        }
+      });
+
+      if (authError) {
+        console.error('Supabase auth signup error:', authError);
+
+        // Supabase returns this when email is already registered
+        if (authError.message && authError.message.toLowerCase().includes('already registered')) {
+          return res.status(409).json({ error: 'Email already registered' });
+        }
+        return res.status(500).json({ error: 'Failed to create account' });
+      }
+
+      if (!authData.user) {
+        return res.status(500).json({ error: 'Failed to create account' });
+      }
+
+      const authUserId = authData.user.id;
+
+      // Upsert profile into customers table (DB trigger may have already created the row)
+      const { data: customer, error: upsertError } = await supabaseAdmin
+        .from('customers')
+        .upsert({
+          id: authUserId,
+          email: email.toLowerCase(),
+          first_name,
+          last_name,
+          name: `${first_name} ${last_name}`,
+          phone: phone || null,
+          accepts_marketing,
+          is_active: true,
+          is_seller: false
+        }, { onConflict: 'id' })
+        .select()
+        .single();
+
+      if (upsertError) {
+        console.error('Customer upsert error:', upsertError);
+        return res.status(500).json({ error: 'Failed to create account profile' });
+      }
+
+      // Return the Supabase access token if a session was created,
+      // otherwise tell the user to confirm their email
+      const token = authData.session?.access_token || null;
+
+      res.status(201).json({
+        message: token ? 'Account created successfully' : 'Account created. Please check your email to confirm.',
+        token,
+        user: {
+          id: customer.id,
+          email: customer.email,
+          first_name: customer.first_name,
+          last_name: customer.last_name,
+          name: customer.name,
+          is_seller: customer.is_seller
+        }
+      });
     } else {
-      // Mock check
+      // Mock fallback
       const existing = mockCustomers.find(c => c.email === email.toLowerCase());
       if (existing) {
         return res.status(409).json({ error: 'Email already registered' });
       }
-    }
 
-    // Hash password
-    const password_hash = await bcrypt.hash(password, 10);
-
-    // Create customer
-    let customer;
-
-    if (supabaseAdmin) {
-      const { data, error } = await supabaseAdmin
-        .from('customers')
-        .insert({
-          email: email.toLowerCase(),
-          password_hash,
-          first_name,
-          last_name,
-          name: `${first_name} ${last_name}`,
-          phone,
-          accepts_marketing,
-          is_active: true,
-          is_seller: false
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Registration error:', error);
-        return res.status(500).json({ error: 'Failed to create account' });
-      }
-
-      customer = data;
-    } else {
-      // Mock creation
-      customer = {
+      const customer = {
         id: `mock-${Date.now()}`,
         email: email.toLowerCase(),
-        password_hash,
         first_name,
         last_name,
         name: `${first_name} ${last_name}`,
@@ -128,29 +200,55 @@ router.post('/register', async (req, res) => {
         created_at: new Date().toISOString()
       };
       mockCustomers.push(customer);
+
+      res.status(201).json({
+        message: 'Account created successfully',
+        token: 'mock-token',
+        user: {
+          id: customer.id,
+          email: customer.email,
+          first_name: customer.first_name,
+          last_name: customer.last_name,
+          name: customer.name,
+          is_seller: customer.is_seller
+        }
+      });
     }
-
-    // Generate token
-    const token = generateCustomerToken(customer, null);
-
-    res.status(201).json({
-      message: 'Account created successfully',
-      token,
-      user: {
-        id: customer.id,
-        email: customer.email,
-        first_name: customer.first_name,
-        last_name: customer.last_name,
-        name: customer.name,
-        is_seller: customer.is_seller
-      }
-    });
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
+/**
+ * @openapi
+ * /customer/login:
+ *   post:
+ *     tags: [Customer Auth]
+ *     summary: Login a customer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful, returns JWT token
+ *       400:
+ *         description: Validation failed
+ *       401:
+ *         description: Invalid email or password
+ *       500:
+ *         description: Server error
+ */
 // Login customer
 router.post('/login', async (req, res) => {
   try {
@@ -165,62 +263,92 @@ router.post('/login', async (req, res) => {
 
     const { email, password } = validation.data;
 
-    let customer;
+    if (supabase && supabaseAdmin) {
+      // Authenticate via Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.toLowerCase(),
+        password
+      });
 
-    if (supabaseAdmin) {
-      const { data, error } = await supabaseAdmin
+      if (authError || !authData.user || !authData.session) {
+        return res.status(401).json({ error: 'Invalid email or password' });
+      }
+
+      // Load customer profile from our table
+      const { data: customer, error: profileError } = await supabaseAdmin
         .from('customers')
         .select('*')
-        .eq('email', email.toLowerCase())
+        .eq('id', authData.user.id)
         .eq('is_active', true)
         .single();
 
-      if (error || !data) {
-        return res.status(401).json({ error: 'Invalid email or password' });
+      if (profileError || !customer) {
+        return res.status(401).json({ error: 'Customer profile not found' });
       }
 
-      customer = data;
+      // Get seller profile if customer is a seller
+      let sellerProfile = null;
+      if (customer.is_seller) {
+        sellerProfile = await getSellerProfile(customer.id);
+      }
+
+      // Return the Supabase access token so the frontend can use it directly
+      res.json({
+        token: authData.session.access_token,
+        user: {
+          id: customer.id,
+          email: customer.email,
+          first_name: customer.first_name,
+          last_name: customer.last_name,
+          name: customer.name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
+          is_seller: customer.is_seller,
+          seller_id: sellerProfile?.id || null
+        }
+      });
     } else {
       // Mock login
-      customer = mockCustomers.find(c => c.email === email.toLowerCase() && c.is_active);
+      const customer = mockCustomers.find(c => c.email === email.toLowerCase() && c.is_active);
       if (!customer) {
         return res.status(401).json({ error: 'Invalid email or password' });
       }
+
+      res.json({
+        token: 'mock-token',
+        user: {
+          id: customer.id,
+          email: customer.email,
+          first_name: customer.first_name,
+          last_name: customer.last_name,
+          name: customer.name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
+          is_seller: customer.is_seller,
+          seller_id: null
+        }
+      });
     }
-
-    // Verify password
-    const validPassword = await bcrypt.compare(password, customer.password_hash);
-    if (!validPassword) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-
-    // Get seller profile if customer is a seller
-    let sellerProfile = null;
-    if (customer.is_seller) {
-      sellerProfile = await getSellerProfile(customer.id);
-    }
-
-    // Generate token
-    const token = generateCustomerToken(customer, sellerProfile);
-
-    res.json({
-      token,
-      user: {
-        id: customer.id,
-        email: customer.email,
-        first_name: customer.first_name,
-        last_name: customer.last_name,
-        name: customer.name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
-        is_seller: customer.is_seller,
-        seller_id: sellerProfile?.id || null
-      }
-    });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
+/**
+ * @openapi
+ * /customer/me:
+ *   get:
+ *     tags: [Customer Auth]
+ *     summary: Get current customer profile
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Customer profile
+ *       404:
+ *         description: Customer not found
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Get current customer profile
 router.get('/me', authenticateCustomer, async (req, res) => {
   try {
@@ -287,6 +415,49 @@ router.get('/me', authenticateCustomer, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /customer/me:
+ *   put:
+ *     tags: [Customer Auth]
+ *     summary: Update customer profile
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               first_name:
+ *                 type: string
+ *               last_name:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               address_line1:
+ *                 type: string
+ *               address_line2:
+ *                 type: string
+ *               city:
+ *                 type: string
+ *               state:
+ *                 type: string
+ *               postal_code:
+ *                 type: string
+ *               accepts_marketing:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Profile updated
+ *       400:
+ *         description: Validation failed
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Update customer profile
 router.put('/me', authenticateCustomer, async (req, res) => {
   try {
@@ -366,7 +537,38 @@ router.put('/me', authenticateCustomer, async (req, res) => {
   }
 });
 
-// Change password
+/**
+ * @openapi
+ * /customer/change-password:
+ *   post:
+ *     tags: [Customer Auth]
+ *     summary: Change customer password
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [currentPassword, newPassword]
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 8
+ *     responses:
+ *       200:
+ *         description: Password updated
+ *       400:
+ *         description: Validation failed
+ *       401:
+ *         description: Current password incorrect
+ *       500:
+ *         description: Server error
+ */
+// Change password (via Supabase Auth admin API)
 router.post('/change-password', authenticateCustomer, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -379,54 +581,63 @@ router.post('/change-password', authenticateCustomer, async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
 
-    let customer;
+    if (supabase && supabaseAdmin) {
+      // Verify current password by attempting to sign in
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: req.customer.email,
+        password: currentPassword
+      });
 
-    if (supabaseAdmin) {
-      const { data, error } = await supabaseAdmin
-        .from('customers')
-        .select('*')
-        .eq('id', req.customer.id)
-        .single();
-
-      if (error || !data) {
-        return res.status(404).json({ error: 'Customer not found' });
+      if (verifyError) {
+        return res.status(401).json({ error: 'Current password is incorrect' });
       }
 
-      customer = data;
-    } else {
-      customer = mockCustomers.find(c => c.id === req.customer.id);
-      if (!customer) {
-        return res.status(404).json({ error: 'Customer not found' });
+      // Update password via admin API
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        req.customer.id,
+        { password: newPassword }
+      );
+
+      if (updateError) {
+        console.error('Password update error:', updateError);
+        return res.status(500).json({ error: 'Failed to update password' });
       }
-    }
 
-    // Verify current password
-    const validPassword = await bcrypt.compare(currentPassword, customer.password_hash);
-    if (!validPassword) {
-      return res.status(401).json({ error: 'Current password is incorrect' });
-    }
-
-    // Hash new password
-    const newPasswordHash = await bcrypt.hash(newPassword, 10);
-
-    if (supabaseAdmin) {
-      await supabaseAdmin
-        .from('customers')
-        .update({ password_hash: newPasswordHash })
-        .eq('id', req.customer.id);
+      res.json({ message: 'Password updated successfully' });
     } else {
-      const index = mockCustomers.findIndex(c => c.id === req.customer.id);
-      mockCustomers[index].password_hash = newPasswordHash;
+      // Mock -- just acknowledge
+      res.json({ message: 'Password updated successfully' });
     }
-
-    res.json({ message: 'Password updated successfully' });
   } catch (error) {
     console.error('Change password error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// Request password reset (placeholder - would need email service)
+/**
+ * @openapi
+ * /customer/forgot-password:
+ *   post:
+ *     tags: [Customer Auth]
+ *     summary: Request password reset email
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       200:
+ *         description: Reset email sent (always returns success to prevent enumeration)
+ *       500:
+ *         description: Server error
+ */
+// Request password reset (via Supabase Auth)
 router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
@@ -435,12 +646,18 @@ router.post('/forgot-password', async (req, res) => {
       return res.status(400).json({ error: 'Email is required' });
     }
 
-    // In production, this would:
-    // 1. Generate a reset token
-    // 2. Store it with expiration
-    // 3. Send email with reset link
+    if (supabase) {
+      // Supabase sends the reset email automatically
+      const { error } = await supabase.auth.resetPasswordForEmail(email.toLowerCase(), {
+        redirectTo: `${process.env.FRONTEND_URL || 'https://www.elitetcg.co.za'}/reset-password`
+      });
 
-    // For now, just acknowledge the request
+      if (error) {
+        console.error('Password reset error:', error);
+      }
+    }
+
+    // Always return the same message to prevent email enumeration
     res.json({
       message: 'If an account with that email exists, a password reset link has been sent.'
     });

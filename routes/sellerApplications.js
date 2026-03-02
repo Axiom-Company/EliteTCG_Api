@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, requireRole, generateCustomerToken } from '../middleware/auth.js';
+import { authenticateToken, requireRole } from '../middleware/auth.js';
 import { supabaseAdmin } from '../config/supabase.js';
 import { mockApplications, mockSellerProfiles } from './sellers.js';
 import { sendSellerApplicationApproved, sendSellerApplicationRejected } from '../utils/email.js';
@@ -10,6 +10,38 @@ const router = Router();
 router.use(authenticateToken);
 router.use(requireRole('super_admin', 'admin', 'manager'));
 
+/**
+ * @openapi
+ * /admin/seller-applications:
+ *   get:
+ *     tags: [Seller Applications]
+ *     summary: Get all seller applications (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, approved, rejected]
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: Paginated list of applications
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Get all seller applications
 router.get('/', async (req, res) => {
   try {
@@ -68,6 +100,30 @@ router.get('/', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /admin/seller-applications/{id}:
+ *   get:
+ *     tags: [Seller Applications]
+ *     summary: Get a single application (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Application details with customer and reviewer
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Application not found
+ *       500:
+ *         description: Server error
+ */
 // Get single application
 router.get('/:id', async (req, res) => {
   try {
@@ -104,6 +160,40 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /admin/seller-applications/{id}/approve:
+ *   post:
+ *     tags: [Seller Applications]
+ *     summary: Approve a seller application (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               admin_notes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Application approved, seller profile created
+ *       400:
+ *         description: Application is not pending
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Application not found
+ *       500:
+ *         description: Server error
+ */
 // Approve application
 router.post('/:id/approve', async (req, res) => {
   try {
@@ -245,6 +335,44 @@ router.post('/:id/approve', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /admin/seller-applications/{id}/reject:
+ *   post:
+ *     tags: [Seller Applications]
+ *     summary: Reject a seller application (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [rejection_reason]
+ *             properties:
+ *               rejection_reason:
+ *                 type: string
+ *               admin_notes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Application rejected
+ *       400:
+ *         description: Application is not pending or missing reason
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Application not found
+ *       500:
+ *         description: Server error
+ */
 // Reject application
 router.post('/:id/reject', async (req, res) => {
   try {
@@ -333,6 +461,22 @@ router.post('/:id/reject', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /admin/seller-applications/stats/overview:
+ *   get:
+ *     tags: [Seller Applications]
+ *     summary: Get application stats overview (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Count of pending, approved, rejected applications
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Get stats
 router.get('/stats/overview', async (req, res) => {
   try {

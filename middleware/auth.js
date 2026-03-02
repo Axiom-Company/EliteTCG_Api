@@ -1,11 +1,13 @@
 import jwt from 'jsonwebtoken';
+import { supabaseAdmin } from '../config/supabase.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 
-// Verify JWT token (for admin users)
+// ── Admin auth (custom JWT for dashboard/staff routes) ──
+
 export const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
     return res.status(401).json({ error: 'Access token required' });
@@ -20,109 +22,115 @@ export const authenticateToken = (req, res, next) => {
   }
 };
 
-// Check if user has required role
 export const requireRole = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-
     if (!allowedRoles.includes(req.user.role)) {
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
-
     next();
   };
 };
 
-// Generate JWT token
 export const generateToken = (user) => {
   return jwt.sign(
-    {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      name: user.name
-    },
+    { id: user.id, email: user.email, role: user.role, name: user.name },
     JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 };
 
-// Generate JWT token for customers
-export const generateCustomerToken = (customer, sellerProfile = null) => {
-  return jwt.sign(
-    {
-      id: customer.id,
-      email: customer.email,
-      type: 'customer',
-      name: customer.name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
-      is_seller: customer.is_seller || false,
-      seller_id: sellerProfile?.id || null
-    },
-    JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-  );
-};
+// ── Customer auth (Supabase only — verifies via Supabase Auth API) ──
 
-// Verify JWT token for customers
-export const authenticateCustomer = (req, res, next) => {
+async function verifySupabaseToken(token) {
+  if (!supabaseAdmin) return null;
+  try {
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+    if (error || !user) return null;
+    return user;
+  } catch {
+    return null;
+  }
+}
+
+export const authenticateCustomer = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
     return res.status(401).json({ error: 'Access token required' });
   }
 
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-
-    // Ensure this is a customer token
-    if (decoded.type !== 'customer') {
-      return res.status(403).json({ error: 'Invalid token type' });
-    }
-
-    req.customer = decoded;
-    next();
-  } catch (error) {
+  const user = await verifySupabaseToken(token);
+  if (!user) {
     return res.status(403).json({ error: 'Invalid or expired token' });
   }
+
+  req.customer = {
+    id: user.id,
+    email: user.email,
+    type: 'customer'
+  };
+  next();
 };
 
-// Optional customer authentication (sets req.customer if valid token, continues regardless)
-export const optionalCustomerAuth = (req, res, next) => {
+export const optionalCustomerAuth = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
   if (token) {
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      if (decoded.type === 'customer') {
-        req.customer = decoded;
-      }
-    } catch (error) {
-      // Token invalid, but continue anyway (it's optional)
+    const user = await verifySupabaseToken(token);
+    if (user) {
+      req.customer = {
+        id: user.id,
+        email: user.email,
+        type: 'customer'
+      };
     }
   }
-
   next();
 };
 
-// Require user to be a verified seller
-export const requireSeller = (req, res, next) => {
+export const requireSeller = async (req, res, next) => {
   if (!req.customer) {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  if (!req.customer.is_seller) {
+  if (!supabaseAdmin) {
     return res.status(403).json({ error: 'Seller account required' });
   }
 
-  if (!req.customer.seller_id) {
-    return res.status(403).json({ error: 'Seller profile not found' });
-  }
+  try {
+    const { data: customer } = await supabaseAdmin
+      .from('customers')
+      .select('is_seller')
+      .eq('id', req.customer.id)
+      .single();
 
-  next();
+    if (!customer || !customer.is_seller) {
+      return res.status(403).json({ error: 'Seller account required' });
+    }
+
+    const { data: sellerProfile } = await supabaseAdmin
+      .from('seller_profiles')
+      .select('id')
+      .eq('customer_id', req.customer.id)
+      .eq('is_active', true)
+      .single();
+
+    if (!sellerProfile) {
+      return res.status(403).json({ error: 'Seller profile not found' });
+    }
+
+    req.customer.is_seller = true;
+    req.customer.seller_id = sellerProfile.id;
+    next();
+  } catch (error) {
+    console.error('requireSeller DB lookup error:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
 };
 
 export default {
@@ -131,6 +139,5 @@ export default {
   generateToken,
   authenticateCustomer,
   optionalCustomerAuth,
-  requireSeller,
-  generateCustomerToken
+  requireSeller
 };

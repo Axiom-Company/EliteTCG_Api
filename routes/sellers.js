@@ -33,6 +33,45 @@ const updateProfileSchema = z.object({
 let mockApplications = [];
 let mockSellerProfiles = [];
 
+/**
+ * @openapi
+ * /sellers/apply:
+ *   post:
+ *     tags: [Sellers]
+ *     summary: Submit a seller application
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [display_name, reason, payfast_email]
+ *             properties:
+ *               display_name:
+ *                 type: string
+ *                 minLength: 2
+ *               reason:
+ *                 type: string
+ *                 minLength: 20
+ *               experience:
+ *                 type: string
+ *               payfast_email:
+ *                 type: string
+ *                 format: email
+ *               payfast_merchant_id:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Application submitted
+ *       400:
+ *         description: Validation failed or already a seller
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Submit seller application
 router.post('/apply', authenticateCustomer, async (req, res) => {
   try {
@@ -125,6 +164,22 @@ router.post('/apply', authenticateCustomer, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /sellers/application-status:
+ *   get:
+ *     tags: [Sellers]
+ *     summary: Get seller application status
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Application status (or null if none)
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Get application status
 router.get('/application-status', authenticateCustomer, async (req, res) => {
   try {
@@ -165,6 +220,24 @@ router.get('/application-status', authenticateCustomer, async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /sellers/profile:
+ *   get:
+ *     tags: [Sellers]
+ *     summary: Get own seller profile
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Seller profile
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Seller profile not found
+ *       500:
+ *         description: Server error
+ */
 // Get own seller profile
 router.get('/profile', authenticateCustomer, requireSeller, async (req, res) => {
   try {
@@ -196,6 +269,57 @@ router.get('/profile', authenticateCustomer, requireSeller, async (req, res) => 
   }
 });
 
+/**
+ * @openapi
+ * /sellers/profile:
+ *   put:
+ *     tags: [Sellers]
+ *     summary: Update own seller profile
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               display_name:
+ *                 type: string
+ *               bio:
+ *                 type: string
+ *               location_city:
+ *                 type: string
+ *               location_province:
+ *                 type: string
+ *               contact_phone:
+ *                 type: string
+ *               contact_whatsapp:
+ *                 type: string
+ *               contact_email:
+ *                 type: string
+ *                 format: email
+ *               show_phone:
+ *                 type: boolean
+ *               show_whatsapp:
+ *                 type: boolean
+ *               show_email:
+ *                 type: boolean
+ *               payfast_email:
+ *                 type: string
+ *                 format: email
+ *               payfast_merchant_id:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Profile updated
+ *       400:
+ *         description: Validation failed
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Update seller profile
 router.put('/profile', authenticateCustomer, requireSeller, async (req, res) => {
   try {
@@ -244,6 +368,26 @@ router.put('/profile', authenticateCustomer, requireSeller, async (req, res) => 
   }
 });
 
+/**
+ * @openapi
+ * /sellers/{id}:
+ *   get:
+ *     tags: [Sellers]
+ *     summary: Get public seller profile
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Public seller profile
+ *       404:
+ *         description: Seller not found
+ *       500:
+ *         description: Server error
+ */
 // Get public seller profile
 router.get('/:id', async (req, res) => {
   try {

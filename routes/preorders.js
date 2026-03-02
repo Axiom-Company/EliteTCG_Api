@@ -11,6 +11,24 @@ const mockPreorders = [
   { id: '3', product_id: '3', release_date: '2025-08-08', deposit_percentage: 20, max_quantity: 50, current_quantity: 12, is_active: true, product: { name: 'Space-Time Smackdown Booster Box', price: 149.99 } },
 ];
 
+/**
+ * @openapi
+ * /preorders:
+ *   get:
+ *     tags: [Preorders]
+ *     summary: Get all preorders
+ *     parameters:
+ *       - in: query
+ *         name: active
+ *         schema:
+ *           type: string
+ *           default: 'true'
+ *     responses:
+ *       200:
+ *         description: List of preorders
+ *       500:
+ *         description: Server error
+ */
 // Get all preorders (public)
 router.get('/', async (req, res) => {
   try {
@@ -45,6 +63,26 @@ router.get('/', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /preorders/{id}:
+ *   get:
+ *     tags: [Preorders]
+ *     summary: Get preorder by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Preorder details
+ *       404:
+ *         description: Preorder not found
+ *       500:
+ *         description: Server error
+ */
 // Get single preorder
 router.get('/:id', async (req, res) => {
   try {
@@ -76,6 +114,41 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /preorders:
+ *   post:
+ *     tags: [Preorders]
+ *     summary: Create a preorder (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [product_id]
+ *             properties:
+ *               product_id:
+ *                 type: string
+ *               release_date:
+ *                 type: string
+ *                 format: date
+ *               deposit_percentage:
+ *                 type: number
+ *               max_quantity:
+ *                 type: integer
+ *               is_active:
+ *                 type: boolean
+ *     responses:
+ *       201:
+ *         description: Preorder created
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Create preorder (admin only)
 router.post('/', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
   try {
@@ -107,6 +180,44 @@ router.post('/', authenticateToken, requireRole('super_admin', 'admin'), async (
   }
 });
 
+/**
+ * @openapi
+ * /preorders/{id}:
+ *   put:
+ *     tags: [Preorders]
+ *     summary: Update a preorder (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               release_date:
+ *                 type: string
+ *                 format: date
+ *               deposit_percentage:
+ *                 type: number
+ *               max_quantity:
+ *                 type: integer
+ *               is_active:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Preorder updated
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Update preorder (admin only)
 router.put('/:id', authenticateToken, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
   try {
@@ -140,6 +251,28 @@ router.put('/:id', authenticateToken, requireRole('super_admin', 'admin', 'manag
   }
 });
 
+/**
+ * @openapi
+ * /preorders/{id}:
+ *   delete:
+ *     tags: [Preorders]
+ *     summary: Delete a preorder (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Preorder deleted
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Delete preorder (admin only)
 router.delete('/:id', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
   try {

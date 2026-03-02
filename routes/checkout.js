@@ -29,8 +29,68 @@ function generateOrderNumber() {
 }
 
 /**
- * POST /api/v1/checkout/direct
- * Body: { items, customer, shipping }
+ * @openapi
+ * /v1/checkout/direct:
+ *   post:
+ *     tags: [Checkout]
+ *     summary: Create a direct checkout order with PayFast payment
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [items, customer, shipping]
+ *             properties:
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     product_id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     unit_price_zar:
+ *                       type: number
+ *                     quantity:
+ *                       type: integer
+ *                     image_url:
+ *                       type: string
+ *               customer:
+ *                 type: object
+ *                 required: [email]
+ *                 properties:
+ *                   email:
+ *                     type: string
+ *                     format: email
+ *                   full_name:
+ *                     type: string
+ *                   phone:
+ *                     type: string
+ *               shipping:
+ *                 type: object
+ *                 required: [address_line1]
+ *                 properties:
+ *                   address_line1:
+ *                     type: string
+ *                   city:
+ *                     type: string
+ *                   province:
+ *                     type: string
+ *                   postal_code:
+ *                     type: string
+ *                   cost_zar:
+ *                     type: number
+ *                   method:
+ *                     type: string
+ *     responses:
+ *       200:
+ *         description: Order created with payment URL
+ *       400:
+ *         description: Missing required fields
+ *       500:
+ *         description: Server error
  */
 router.post('/direct', async (req, res) => {
   try {

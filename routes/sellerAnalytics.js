@@ -9,6 +9,22 @@ const router = Router();
 router.use(authenticateCustomer);
 router.use(requireSeller);
 
+/**
+ * @openapi
+ * /seller/analytics/overview:
+ *   get:
+ *     tags: [Seller Analytics]
+ *     summary: Get seller overview stats
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Overview stats (listings, views, sales, revenue)
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Get overview stats
 router.get('/overview', async (req, res) => {
   try {
@@ -115,6 +131,40 @@ router.get('/overview', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /seller/analytics/listings:
+ *   get:
+ *     tags: [Seller Analytics]
+ *     summary: Get listing performance data
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [views, favorites, price, created]
+ *           default: views
+ *       - in: query
+ *         name: order
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Listing performance data
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Get listing performance
 router.get('/listings', async (req, res) => {
   try {
@@ -187,6 +237,29 @@ router.get('/listings', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /seller/analytics/views:
+ *   get:
+ *     tags: [Seller Analytics]
+ *     summary: Get views over time
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [24h, 7d, 30d, 90d]
+ *           default: 7d
+ *     responses:
+ *       200:
+ *         description: Daily view counts for the period
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Get views over time
 router.get('/views', async (req, res) => {
   try {
@@ -286,6 +359,28 @@ router.get('/views', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /seller/analytics/activity:
+ *   get:
+ *     tags: [Seller Analytics]
+ *     summary: Get recent activity (views)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Recent listing activity
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Get recent activity
 router.get('/activity', async (req, res) => {
   try {

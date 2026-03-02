@@ -5,6 +5,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './config/swagger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -98,6 +100,13 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve uploaded product images
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Swagger docs
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'EliteTCG API Docs',
+}));
+app.get('/api/docs.json', (req, res) => res.json(swaggerSpec));
 
 // Health check
 app.get('/api/health', (req, res) => {

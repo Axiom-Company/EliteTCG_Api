@@ -23,11 +23,57 @@ const purchasePromotionSchema = z.object({
   tier: z.enum(/** @type {[string, ...string[]]} */ (TIER_KEYS))
 });
 
+/**
+ * @openapi
+ * /marketplace/promotions/tiers:
+ *   get:
+ *     tags: [Promotions]
+ *     summary: Get available promotion tiers (public)
+ *     responses:
+ *       200:
+ *         description: Promotion tier configuration
+ */
 // Get available promotion tiers (public)
 router.get('/tiers', (req, res) => {
   res.json({ tiers: PROMOTION_TIERS });
 });
 
+/**
+ * @openapi
+ * /marketplace/promotions/purchase:
+ *   post:
+ *     tags: [Promotions]
+ *     summary: Purchase a promotion for a listing (seller)
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [listing_id, tier]
+ *             properties:
+ *               listing_id:
+ *                 type: string
+ *                 format: uuid
+ *               tier:
+ *                 type: string
+ *                 enum: [spotlight, featured, premium, elite]
+ *     responses:
+ *       200:
+ *         description: Promotion created with PayFast payment URL
+ *       400:
+ *         description: Validation failed or listing not active
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Not authorized to promote this listing
+ *       404:
+ *         description: Listing not found
+ *       500:
+ *         description: Server error
+ */
 // Purchase a promotion for a listing
 router.post('/purchase', authenticateCustomer, requireSeller, async (req, res) => {
   try {
@@ -133,6 +179,37 @@ router.post('/purchase', authenticateCustomer, requireSeller, async (req, res) =
   }
 });
 
+/**
+ * @openapi
+ * /marketplace/promotions/notify:
+ *   post:
+ *     tags: [Promotions]
+ *     summary: PayFast ITN webhook for promotion payments
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/x-www-form-urlencoded:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               m_payment_id:
+ *                 type: string
+ *               payment_status:
+ *                 type: string
+ *               amount_gross:
+ *                 type: string
+ *               pf_payment_id:
+ *                 type: string
+ *               signature:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: ITN processed
+ *       400:
+ *         description: Invalid signature
+ *       403:
+ *         description: Invalid source IP
+ */
 // PayFast ITN webhook for promotion payments
 router.post('/notify', async (req, res) => {
   try {
@@ -221,6 +298,22 @@ router.post('/notify', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /marketplace/promotions/my:
+ *   get:
+ *     tags: [Promotions]
+ *     summary: Get current seller's promotions
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of seller promotions
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // Get seller's promotions (active and past)
 router.get('/my', authenticateCustomer, requireSeller, async (req, res) => {
   try {

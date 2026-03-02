@@ -4,6 +4,30 @@ import { supabaseAdmin } from '../config/supabase.js';
 
 const router = Router();
 
+/**
+ * @openapi
+ * /sets:
+ *   get:
+ *     tags: [Sets]
+ *     summary: Get all sets
+ *     parameters:
+ *       - in: query
+ *         name: active
+ *         schema:
+ *           type: string
+ *           enum: ['all']
+ *         description: Pass "all" to include inactive sets
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *     responses:
+ *       200:
+ *         description: List of sets
+ *       500:
+ *         description: Server error
+ */
 // GET all sets
 router.get('/', async (req, res) => {
   try {
@@ -27,6 +51,27 @@ router.get('/', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /sets/{id}:
+ *   get:
+ *     tags: [Sets]
+ *     summary: Get set by ID or code
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Set ID or code
+ *     responses:
+ *       200:
+ *         description: Set details
+ *       404:
+ *         description: Set not found
+ *       500:
+ *         description: Server error
+ */
 // GET single set by id or code
 router.get('/:id', async (req, res) => {
   try {
@@ -45,6 +90,43 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /sets:
+ *   post:
+ *     tags: [Sets]
+ *     summary: Create a set (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               code:
+ *                 type: string
+ *               release_date:
+ *                 type: string
+ *                 format: date
+ *               is_active:
+ *                 type: boolean
+ *               is_new:
+ *                 type: boolean
+ *               image:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Set created
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // POST create set
 router.post('/', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
   try {
@@ -76,6 +158,48 @@ router.post('/', authenticateToken, requireRole('super_admin', 'admin'), async (
   }
 });
 
+/**
+ * @openapi
+ * /sets/{id}:
+ *   put:
+ *     tags: [Sets]
+ *     summary: Update a set (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               code:
+ *                 type: string
+ *               release_date:
+ *                 type: string
+ *                 format: date
+ *               is_active:
+ *                 type: boolean
+ *               is_new:
+ *                 type: boolean
+ *               image:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Set updated
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // PUT update set
 router.put('/:id', authenticateToken, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
   try {
@@ -97,6 +221,28 @@ router.put('/:id', authenticateToken, requireRole('super_admin', 'admin', 'manag
   }
 });
 
+/**
+ * @openapi
+ * /sets/{id}:
+ *   delete:
+ *     tags: [Sets]
+ *     summary: Delete a set (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Set deleted
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // DELETE set
 router.delete('/:id', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
   try {
@@ -110,6 +256,39 @@ router.delete('/:id', authenticateToken, requireRole('super_admin', 'admin'), as
   }
 });
 
+/**
+ * @openapi
+ * /sets/reorder:
+ *   post:
+ *     tags: [Sets]
+ *     summary: Reorder sets (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [orders]
+ *             properties:
+ *               orders:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     display_order:
+ *                       type: integer
+ *     responses:
+ *       200:
+ *         description: Sets reordered
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
 // POST reorder sets
 router.post('/reorder', authenticateToken, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
   try {
