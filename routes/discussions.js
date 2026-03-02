@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticateCustomer, optionalCustomerAuth, authenticateToken, requireRole } from '../middleware/auth.js';
+import { authenticateCustomer, optionalCustomerAuth, authenticateSupabaseUser, requireRole } from '../middleware/auth.js';
 import { supabaseAdmin } from '../config/supabase.js';
 
 const router = Router();
@@ -220,7 +220,7 @@ router.get('/threads/:threadId', optionalCustomerAuth, async (req, res) => {
 
     // Get author info
     const { data: author } = await supabaseAdmin
-      .from('customers')
+      .from('profiles')
       .select('first_name, last_name')
       .eq('id', thread.customer_id)
       .single();
@@ -262,7 +262,7 @@ router.get('/threads/:threadId', optionalCustomerAuth, async (req, res) => {
     const enrichedReplies = [];
     for (const reply of replies || []) {
       const { data: replyAuthor } = await supabaseAdmin
-        .from('customers')
+        .from('profiles')
         .select('first_name, last_name')
         .eq('id', reply.customer_id)
         .single();
@@ -290,7 +290,7 @@ router.get('/threads/:threadId', optionalCustomerAuth, async (req, res) => {
       const enrichedNested = [];
       for (const nested of nestedReplies || []) {
         const { data: nestedAuthor } = await supabaseAdmin
-          .from('customers')
+          .from('profiles')
           .select('first_name, last_name')
           .eq('id', nested.customer_id)
           .single();
@@ -778,7 +778,7 @@ router.post('/replies/:replyId/vote', authenticateCustomer, async (req, res) => 
 // ============================================
 
 // Admin: Pin/unpin thread
-router.patch('/threads/:threadId/pin', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.patch('/threads/:threadId/pin', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { threadId } = req.params;
     const { is_pinned } = req.body;
@@ -803,7 +803,7 @@ router.patch('/threads/:threadId/pin', authenticateToken, requireRole('super_adm
 });
 
 // Admin: Lock/unlock thread
-router.patch('/threads/:threadId/lock', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.patch('/threads/:threadId/lock', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { threadId } = req.params;
     const { is_locked } = req.body;
@@ -828,7 +828,7 @@ router.patch('/threads/:threadId/lock', authenticateToken, requireRole('super_ad
 });
 
 // Admin: Delete any thread
-router.delete('/admin/threads/:threadId', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.delete('/admin/threads/:threadId', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { threadId } = req.params;
 
@@ -850,7 +850,7 @@ router.delete('/admin/threads/:threadId', authenticateToken, requireRole('super_
 });
 
 // Admin: Hide/flag a reply
-router.patch('/replies/:replyId/moderate', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.patch('/replies/:replyId/moderate', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { replyId } = req.params;
     const { is_hidden, is_flagged } = req.body;
@@ -879,7 +879,7 @@ router.patch('/replies/:replyId/moderate', authenticateToken, requireRole('super
 });
 
 // Admin: Manage discussion categories
-router.post('/categories', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.post('/categories', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { name, slug, description, icon, color, display_order } = req.body;
 
@@ -905,7 +905,7 @@ router.post('/categories', authenticateToken, requireRole('super_admin', 'admin'
   }
 });
 
-router.put('/categories/:categoryId', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.put('/categories/:categoryId', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { categoryId } = req.params;
     const { name, description, icon, color, display_order, is_active } = req.body;
@@ -998,7 +998,7 @@ async function enrichThreads(threads, customer) {
   const enriched = [];
   for (const thread of threads) {
     const { data: author } = await supabaseAdmin
-      .from('customers')
+      .from('profiles')
       .select('first_name, last_name')
       .eq('id', thread.customer_id)
       .single();

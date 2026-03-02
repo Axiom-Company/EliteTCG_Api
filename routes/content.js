@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticateCustomer, optionalCustomerAuth, authenticateToken, requireRole } from '../middleware/auth.js';
+import { authenticateCustomer, optionalCustomerAuth, authenticateSupabaseUser, requireRole } from '../middleware/auth.js';
 import { supabaseAdmin } from '../config/supabase.js';
 
 const router = Router();
@@ -548,7 +548,7 @@ router.delete('/:postId/like', authenticateCustomer, async (req, res) => {
 // ============================================
 
 // Create a post (admin)
-router.post('/', authenticateToken, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
+router.post('/', authenticateSupabaseUser, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
   try {
     const validation = createPostSchema.safeParse(req.body);
     if (!validation.success) {
@@ -614,7 +614,7 @@ router.post('/', authenticateToken, requireRole('super_admin', 'admin', 'manager
 });
 
 // Update a post (admin)
-router.put('/:postId', authenticateToken, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
+router.put('/:postId', authenticateSupabaseUser, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
   try {
     const { postId } = req.params;
     const validation = updatePostSchema.safeParse(req.body);
@@ -657,7 +657,7 @@ router.put('/:postId', authenticateToken, requireRole('super_admin', 'admin', 'm
 });
 
 // Delete a post (admin)
-router.delete('/:postId', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.delete('/:postId', authenticateSupabaseUser, requireRole('super_admin', 'admin'), async (req, res) => {
   try {
     const { postId } = req.params;
 
@@ -679,7 +679,7 @@ router.delete('/:postId', authenticateToken, requireRole('super_admin', 'admin')
 });
 
 // List all posts including drafts (admin)
-router.get('/admin/all', authenticateToken, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
+router.get('/admin/all', authenticateSupabaseUser, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
@@ -718,7 +718,7 @@ router.get('/admin/all', authenticateToken, requireRole('super_admin', 'admin', 
 });
 
 // Admin: Hide/flag a comment
-router.patch('/comments/:commentId/moderate', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.patch('/comments/:commentId/moderate', authenticateSupabaseUser, requireRole('super_admin', 'admin'), async (req, res) => {
   try {
     const { commentId } = req.params;
     const { is_hidden, is_flagged } = req.body;

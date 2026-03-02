@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { authenticateSupabaseUser, requireRole } from '../middleware/auth.js';
 import { supabaseAdmin } from '../config/supabase.js';
 
 const router = Router();
@@ -43,7 +43,7 @@ router.get('/link', async (req, res) => {
 });
 
 // Update Discord invite link (admin)
-router.put('/link', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.put('/link', authenticateSupabaseUser, requireRole('super_admin', 'admin'), async (req, res) => {
   try {
     const validation = updateLinkSchema.safeParse(req.body);
     if (!validation.success) {

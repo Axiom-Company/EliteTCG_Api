@@ -1,4 +1,5 @@
 import express from 'express';
+import { createServer } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import cors from 'cors';
@@ -45,8 +46,10 @@ import discussionRoutes from './routes/discussions.js';
 import discordRoutes from './routes/discord.js';
 import communityFeedRoutes from './routes/communityFeed.js';
 import portfolioRoutes from './routes/portfolio.js';
+import chatRoutes from './routes/chat.js';
 import { supabaseAdmin } from './config/supabase.js';
 import { createDailySnapshots, refreshStalePrices } from './utils/portfolioJobs.js';
+import { initChatSocket } from './chat/chatSocket.js';
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -146,6 +149,7 @@ app.use('/api/community/content', contentRoutes);
 app.use('/api/community/reviews', productReviewRoutes);
 app.use('/api/community/discussions', discussionRoutes);
 app.use('/api/community/discord', discordRoutes);
+app.use('/api/community/chat', chatRoutes);
 app.use('/api/community', communityFeedRoutes);
 
 // 404 handler
@@ -159,15 +163,22 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
+// Create HTTP server for Express + Socket.io
+const server = createServer(app);
+
+// Initialize Socket.io chat server
+initChatSocket(server, allowedOrigins);
+
 // Start server (for standalone deployment)
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, '0.0.0.0', () => {
+  server.listen(PORT, '0.0.0.0', () => {
     console.log(`
 ╔════════════════════════════════════════════╗
 ║                                            ║
 ║   EliteTCG API Server                      ║
 ║   Running on port ${PORT}                     ║
 ║   Environment: ${process.env.NODE_ENV || 'development'}         ║
+║   Socket.io: enabled (chat)                ║
 ║                                            ║
 ║   Endpoints:                               ║
 ║   - GET  /api/health                       ║
@@ -177,12 +188,8 @@ if (process.env.NODE_ENV !== 'test') {
 ║   - GET  /api/products                     ║
 ║   - GET  /api/sets                         ║
 ║   - GET  /api/config                       ║
-║   - GET  /api/preorders                    ║
-║   - POST /api/discounts/validate           ║
-║   - GET  /api/subscriptions/tiers          ║
-║   - POST /api/subscriptions/subscribe      ║
-║   - GET  /api/portfolio                    ║
-║   - GET  /api/portfolio/search             ║
+║   - GET  /api/community/chat/channels      ║
+║   - WS   /socket.io (chat real-time)       ║
 ║                                            ║
 ╚════════════════════════════════════════════╝
     `);
@@ -217,6 +224,18 @@ if (process.env.NODE_ENV !== 'test') {
           console.error('[Subscriptions] Expiry cleanup error:', err.message);
         }
       }, 60 * 60 * 1000);
+
+      // Background job: purge old DM messages (daily)
+      setInterval(async () => {
+        try {
+          const { data, error } = await supabaseAdmin.rpc('purge_old_dm_messages', { retention_days: 180 });
+          if (!error && data > 0) {
+            console.log(`[Chat Cleanup] Purged ${data} old DM message(s)`);
+          }
+        } catch (err) {
+          console.error('[Chat Cleanup] DM purge error:', err.message);
+        }
+      }, 24 * 60 * 60 * 1000);
     }
   });
 }

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { authenticateSupabaseUser, requireRole } from '../middleware/auth.js';
 import { supabaseAdmin } from '../config/supabase.js';
 
 const router = Router();
@@ -243,7 +243,7 @@ router.get('/:itemId', async (req, res) => {
 // ============================================
 
 // Create a new tracked item (admin)
-router.post('/', authenticateToken, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
+router.post('/', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const validation = createTrackedItemSchema.safeParse(req.body);
     if (!validation.success) {
@@ -291,7 +291,7 @@ router.post('/', authenticateToken, requireRole('super_admin', 'admin', 'manager
 });
 
 // Update a tracked item (admin)
-router.put('/:itemId', authenticateToken, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
+router.put('/:itemId', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { itemId } = req.params;
     const validation = updateTrackedItemSchema.safeParse(req.body);
@@ -319,7 +319,7 @@ router.put('/:itemId', authenticateToken, requireRole('super_admin', 'admin', 'm
 });
 
 // Record a new price data point (admin)
-router.post('/:itemId/record', authenticateToken, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
+router.post('/:itemId/record', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { itemId } = req.params;
     const validation = recordPriceSchema.safeParse(req.body);
@@ -405,7 +405,7 @@ router.post('/:itemId/record', authenticateToken, requireRole('super_admin', 'ad
 });
 
 // Bulk record prices (admin)
-router.post('/bulk-record', authenticateToken, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
+router.post('/bulk-record', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const validation = bulkRecordPriceSchema.safeParse(req.body);
     if (!validation.success) {
@@ -468,7 +468,7 @@ router.post('/bulk-record', authenticateToken, requireRole('super_admin', 'admin
 });
 
 // Delete a tracked item (admin)
-router.delete('/:itemId', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.delete('/:itemId', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { itemId } = req.params;
 
