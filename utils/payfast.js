@@ -212,6 +212,50 @@ function generateStorePaymentData(order, buyer) {
 }
 
 /**
+ * Generate payment data for subscription box payments
+ */
+function generateSubscriptionPaymentData(subscription, tier, buyer, boxId = null) {
+  const subReturnUrl = process.env.PAYFAST_SUB_RETURN_URL || 'https://www.elitetcg.co.za/subscriptions/payment/success';
+  const subCancelUrl = process.env.PAYFAST_SUB_CANCEL_URL || 'https://www.elitetcg.co.za/subscriptions/payment/cancel';
+  const subNotifyUrl = process.env.PAYFAST_SUB_NOTIFY_URL || 'http://localhost:3001/api/subscriptions/notify';
+
+  const data = {
+    // Merchant details
+    merchant_id: PAYFAST_CONFIG.merchantId,
+    merchant_key: PAYFAST_CONFIG.merchantKey,
+
+    // Return URLs
+    return_url: subReturnUrl,
+    cancel_url: subCancelUrl,
+    notify_url: subNotifyUrl,
+
+    // Buyer details
+    name_first: buyer.first_name || 'Customer',
+    name_last: buyer.last_name || '',
+    email_address: buyer.email,
+    cell_number: buyer.phone?.replace(/\D/g, '') || '',
+
+    // Transaction details
+    m_payment_id: subscription.id,
+    amount: parseFloat(subscription.monthly_amount).toFixed(2),
+    item_name: `Elite TCG ${tier.name} — Monthly Subscription`.substring(0, 100),
+    item_description: `${tier.name} subscription box (${subscription.subscription_number})`.substring(0, 255),
+
+    // Custom data to identify in ITN webhook
+    custom_str1: subscription.id,           // subscription ID
+    custom_str2: boxId || '',               // box ID (first month)
+    custom_str3: 'subscription',            // payment type identifier
+    custom_str4: tier.slug || tier.name,    // tier identifier
+    custom_int1: 1,                         // quantity (always 1 box)
+  };
+
+  // Generate signature
+  data.signature = generateSignature(data, PAYFAST_CONFIG.passphrase);
+
+  return data;
+}
+
+/**
  * Validate ITN (Instant Transaction Notification)
  */
 async function validateITN(pfData, pfHost) {
@@ -246,6 +290,7 @@ export const PayFast = {
   validateIP,
   generatePaymentData,
   generateStorePaymentData,
+  generateSubscriptionPaymentData,
   buildPaymentForm,
   buildPaymentUrl,
   validateITN

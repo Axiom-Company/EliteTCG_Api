@@ -157,6 +157,78 @@ export async function sendPromotionConfirmation(toEmail, sellerName, listingTitl
   await sendEmail(toEmail, sellerName, `Promotion Active — ${listingTitle}`, html);
 }
 
+// ── Subscription emails ──
+
+export async function sendSubscriptionConfirmation(toEmail, toName, subscriptionNumber, tierName, monthlyAmount) {
+  const html = wrap(`
+    <h2 style="color:#1a1a2e">Welcome to Elite TCG Subscriptions!</h2>
+    <p>Hi ${toName || 'Trainer'},</p>
+    <p>Your <strong>${tierName}</strong> subscription is now active.</p>
+    <table style="border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:6px 12px;color:#888">Subscription</td><td style="padding:6px 12px;font-weight:bold">${subscriptionNumber}</td></tr>
+      <tr><td style="padding:6px 12px;color:#888">Plan</td><td style="padding:6px 12px">${tierName}</td></tr>
+      <tr><td style="padding:6px 12px;color:#888">Monthly</td><td style="padding:6px 12px;font-weight:bold;color:#16a34a">R${parseFloat(monthlyAmount).toFixed(2)}</td></tr>
+    </table>
+    <p>Your first box is being prepared and will ship soon. You'll receive a tracking email when it's on its way!</p>
+    <p>${btn('https://www.elitetcg.co.za/subscriptions/my', 'Manage Subscription')}</p>`);
+
+  await sendEmail(toEmail, toName, `Subscription Active — ${tierName}`, html);
+}
+
+export async function sendSubscriptionCancelled(toEmail, toName, subscriptionNumber, expiresAt) {
+  const expDate = expiresAt
+    ? new Date(expiresAt).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' })
+    : 'the end of your current billing period';
+  const html = wrap(`
+    <h2 style="color:#1a1a2e">Subscription Cancelled — ${subscriptionNumber}</h2>
+    <p>Hi ${toName || 'Trainer'},</p>
+    <p>Your subscription <strong>${subscriptionNumber}</strong> has been cancelled.</p>
+    <p>You'll still receive your box for the current period (until <strong>${expDate}</strong>).</p>
+    <p>We'd love to have you back! You can resubscribe any time from our website.</p>
+    <p>${btn('https://www.elitetcg.co.za/subscriptions', 'View Subscription Plans')}</p>`);
+
+  await sendEmail(toEmail, toName, `Subscription Cancelled — ${subscriptionNumber}`, html);
+}
+
+export async function sendSubscriptionBoxShipped(toEmail, toName, boxNumber, trackingNumber) {
+  const trackingSection = trackingNumber
+    ? `<p><strong>Tracking Number:</strong> ${trackingNumber}</p>
+       <p>${btn(`https://www.thecourierguy.co.za/tracking?waybill=${trackingNumber}`, 'Track Your Box')}</p>`
+    : '<p>Tracking info will be available soon.</p>';
+
+  const html = wrap(`
+    <h2 style="color:#1a1a2e">Your Subscription Box Has Shipped!</h2>
+    <p>Hi ${toName || 'Trainer'},</p>
+    <p>Great news! Your subscription box <strong>${boxNumber}</strong> is on its way to you.</p>
+    ${trackingSection}
+    <p>Can't wait for you to open it!</p>`);
+
+  await sendEmail(toEmail, toName, `Your Box Has Shipped — ${boxNumber}`, html);
+}
+
+export async function sendSubscriptionRenewalReminder(toEmail, toName, tierName, nextBillingDate, monthlyAmount) {
+  const billingDate = new Date(nextBillingDate).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' });
+  const html = wrap(`
+    <h2 style="color:#1a1a2e">Subscription Renewal Reminder</h2>
+    <p>Hi ${toName || 'Trainer'},</p>
+    <p>Your <strong>${tierName}</strong> subscription will renew on <strong>${billingDate}</strong> for <strong>R${parseFloat(monthlyAmount).toFixed(2)}</strong>.</p>
+    <p>Your next box is being curated with care!</p>
+    <p>${btn('https://www.elitetcg.co.za/subscriptions/my', 'Manage Subscription')}</p>`);
+
+  await sendEmail(toEmail, toName, `Renewal Reminder — ${tierName}`, html);
+}
+
+export async function sendSubscriptionPaymentFailed(toEmail, toName, subscriptionNumber, tierName) {
+  const html = wrap(`
+    <h2 style="color:#c41e3a">Payment Failed — ${subscriptionNumber}</h2>
+    <p>Hi ${toName || 'Trainer'},</p>
+    <p>We were unable to process your payment for the <strong>${tierName}</strong> subscription.</p>
+    <p>Please update your payment method to continue receiving your monthly box.</p>
+    <p>${btn('https://www.elitetcg.co.za/subscriptions/my', 'Update Payment')}</p>`);
+
+  await sendEmail(toEmail, toName, `Payment Failed — ${subscriptionNumber}`, html);
+}
+
 export default {
   sendEmail,
   sendOrderConfirmation,
@@ -168,4 +240,9 @@ export default {
   sendSellerApplicationApproved,
   sendSellerApplicationRejected,
   sendPromotionConfirmation,
+  sendSubscriptionConfirmation,
+  sendSubscriptionCancelled,
+  sendSubscriptionBoxShipped,
+  sendSubscriptionRenewalReminder,
+  sendSubscriptionPaymentFailed,
 };

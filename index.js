@@ -33,6 +33,8 @@ import ordersRoutes from './routes/orders.js';
 import promotionRoutes from './routes/promotions.js';
 import shippingRoutes from './routes/shipping.js';
 import checkoutRoutes from './routes/checkout.js';
+import subscriptionRoutes from './routes/subscriptions.js';
+import adminSubscriptionRoutes from './routes/adminSubscriptions.js';
 import { supabaseAdmin } from './config/supabase.js';
 
 const app = express();
@@ -114,6 +116,8 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/marketplace/promotions', promotionRoutes);
 app.use('/api/v1/shipping', shippingRoutes);
 app.use('/api/v1/checkout', checkoutRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/admin/subscriptions', adminSubscriptionRoutes);
 app.use('/api/v1', adminApiRoutes);
 
 // 404 handler
@@ -147,6 +151,8 @@ if (process.env.NODE_ENV !== 'test') {
 ║   - GET  /api/config                       ║
 ║   - GET  /api/preorders                    ║
 ║   - POST /api/discounts/validate           ║
+║   - GET  /api/subscriptions/tiers          ║
+║   - POST /api/subscriptions/subscribe      ║
 ║                                            ║
 ╚════════════════════════════════════════════╝
     `);
@@ -163,6 +169,24 @@ if (process.env.NODE_ENV !== 'test') {
           console.error('[Cleanup] Reservation cleanup error:', err.message);
         }
       }, 5 * 60 * 1000);
+
+      // Background job: expire cancelled subscriptions past their period end (every hour)
+      setInterval(async () => {
+        try {
+          const { data, error } = await supabaseAdmin
+            .from('subscriptions')
+            .update({ status: 'expired' })
+            .eq('status', 'cancelled')
+            .lt('expires_at', new Date().toISOString())
+            .select('id');
+
+          if (!error && data && data.length > 0) {
+            console.log(`[Subscriptions] Expired ${data.length} cancelled subscription(s)`);
+          }
+        } catch (err) {
+          console.error('[Subscriptions] Expiry cleanup error:', err.message);
+        }
+      }, 60 * 60 * 1000);
     }
   });
 }
