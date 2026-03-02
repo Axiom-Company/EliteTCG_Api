@@ -35,7 +35,16 @@ import shippingRoutes from './routes/shipping.js';
 import checkoutRoutes from './routes/checkout.js';
 import subscriptionRoutes from './routes/subscriptions.js';
 import adminSubscriptionRoutes from './routes/adminSubscriptions.js';
+import pullRateRoutes from './routes/pullRates.js';
+import priceTrendRoutes from './routes/priceTrends.js';
+import contentRoutes from './routes/content.js';
+import productReviewRoutes from './routes/productReviews.js';
+import discussionRoutes from './routes/discussions.js';
+import discordRoutes from './routes/discord.js';
+import communityFeedRoutes from './routes/communityFeed.js';
+import portfolioRoutes from './routes/portfolio.js';
 import { supabaseAdmin } from './config/supabase.js';
+import { createDailySnapshots, refreshStalePrices } from './utils/portfolioJobs.js';
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -119,6 +128,16 @@ app.use('/api/v1/checkout', checkoutRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/admin/subscriptions', adminSubscriptionRoutes);
 app.use('/api/v1', adminApiRoutes);
+app.use('/api/portfolio', portfolioRoutes);
+
+// Community Hub Routes
+app.use('/api/community/pull-rates', pullRateRoutes);
+app.use('/api/community/price-trends', priceTrendRoutes);
+app.use('/api/community/content', contentRoutes);
+app.use('/api/community/reviews', productReviewRoutes);
+app.use('/api/community/discussions', discussionRoutes);
+app.use('/api/community/discord', discordRoutes);
+app.use('/api/community', communityFeedRoutes);
 
 // 404 handler
 app.use('/api/*', (req, res) => {
@@ -153,6 +172,8 @@ if (process.env.NODE_ENV !== 'test') {
 ║   - POST /api/discounts/validate           ║
 ║   - GET  /api/subscriptions/tiers          ║
 ║   - POST /api/subscriptions/subscribe      ║
+║   - GET  /api/portfolio                    ║
+║   - GET  /api/portfolio/search             ║
 ║                                            ║
 ╚════════════════════════════════════════════╝
     `);
