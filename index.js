@@ -40,7 +40,9 @@ import productReviewRoutes from './routes/productReviews.js';
 import discussionRoutes from './routes/discussions.js';
 import discordRoutes from './routes/discord.js';
 import communityFeedRoutes from './routes/communityFeed.js';
+import portfolioRoutes from './routes/portfolio.js';
 import { supabaseAdmin } from './config/supabase.js';
+import { createDailySnapshots, refreshStalePrices } from './utils/portfolioJobs.js';
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -122,6 +124,7 @@ app.use('/api/marketplace/promotions', promotionRoutes);
 app.use('/api/v1/shipping', shippingRoutes);
 app.use('/api/v1/checkout', checkoutRoutes);
 app.use('/api/v1', adminApiRoutes);
+app.use('/api/portfolio', portfolioRoutes);
 
 // Community Hub Routes
 app.use('/api/community/pull-rates', pullRateRoutes);
@@ -163,6 +166,8 @@ if (process.env.NODE_ENV !== 'test') {
 ║   - GET  /api/config                       ║
 ║   - GET  /api/preorders                    ║
 ║   - POST /api/discounts/validate           ║
+║   - GET  /api/portfolio                    ║
+║   - GET  /api/portfolio/search             ║
 ║                                            ║
 ╚════════════════════════════════════════════╝
     `);
@@ -179,6 +184,28 @@ if (process.env.NODE_ENV !== 'test') {
           console.error('[Cleanup] Reservation cleanup error:', err.message);
         }
       }, 5 * 60 * 1000);
+
+      // Portfolio: refresh stale card prices every 30 minutes
+      setInterval(async () => {
+        try {
+          await refreshStalePrices({ maxAgeMs: 6 * 60 * 60 * 1000, batchSize: 30 });
+        } catch (err) {
+          console.error('[Portfolio] Price refresh error:', err.message);
+        }
+      }, 30 * 60 * 1000);
+
+      // Portfolio: daily value snapshot every 24 hours (also run once on startup after 60s)
+      setTimeout(() => createDailySnapshots().catch(err =>
+        console.error('[Portfolio] Initial snapshot error:', err.message)
+      ), 60 * 1000);
+
+      setInterval(async () => {
+        try {
+          await createDailySnapshots();
+        } catch (err) {
+          console.error('[Portfolio] Snapshot error:', err.message);
+        }
+      }, 24 * 60 * 60 * 1000);
     }
   });
 }
