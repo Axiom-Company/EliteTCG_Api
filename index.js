@@ -33,6 +33,13 @@ import ordersRoutes from './routes/orders.js';
 import promotionRoutes from './routes/promotions.js';
 import shippingRoutes from './routes/shipping.js';
 import checkoutRoutes from './routes/checkout.js';
+import pullRateRoutes from './routes/pullRates.js';
+import priceTrendRoutes from './routes/priceTrends.js';
+import contentRoutes from './routes/content.js';
+import productReviewRoutes from './routes/productReviews.js';
+import discussionRoutes from './routes/discussions.js';
+import discordRoutes from './routes/discord.js';
+import communityFeedRoutes from './routes/communityFeed.js';
 import { supabaseAdmin } from './config/supabase.js';
 
 const app = express();
@@ -115,6 +122,15 @@ app.use('/api/marketplace/promotions', promotionRoutes);
 app.use('/api/v1/shipping', shippingRoutes);
 app.use('/api/v1/checkout', checkoutRoutes);
 app.use('/api/v1', adminApiRoutes);
+
+// Community Hub Routes
+app.use('/api/community/pull-rates', pullRateRoutes);
+app.use('/api/community/price-trends', priceTrendRoutes);
+app.use('/api/community/content', contentRoutes);
+app.use('/api/community/reviews', productReviewRoutes);
+app.use('/api/community/discussions', discussionRoutes);
+app.use('/api/community/discord', discordRoutes);
+app.use('/api/community', communityFeedRoutes);
 
 // 404 handler
 app.use('/api/*', (req, res) => {
