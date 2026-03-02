@@ -33,6 +33,8 @@ import ordersRoutes from './routes/orders.js';
 import promotionRoutes from './routes/promotions.js';
 import shippingRoutes from './routes/shipping.js';
 import checkoutRoutes from './routes/checkout.js';
+import subscriptionRoutes from './routes/subscriptions.js';
+import adminSubscriptionRoutes from './routes/adminSubscriptions.js';
 import pullRateRoutes from './routes/pullRates.js';
 import priceTrendRoutes from './routes/priceTrends.js';
 import contentRoutes from './routes/content.js';
@@ -123,6 +125,8 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/marketplace/promotions', promotionRoutes);
 app.use('/api/v1/shipping', shippingRoutes);
 app.use('/api/v1/checkout', checkoutRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/admin/subscriptions', adminSubscriptionRoutes);
 app.use('/api/v1', adminApiRoutes);
 app.use('/api/portfolio', portfolioRoutes);
 
@@ -166,6 +170,8 @@ if (process.env.NODE_ENV !== 'test') {
 ║   - GET  /api/config                       ║
 ║   - GET  /api/preorders                    ║
 ║   - POST /api/discounts/validate           ║
+║   - GET  /api/subscriptions/tiers          ║
+║   - POST /api/subscriptions/subscribe      ║
 ║   - GET  /api/portfolio                    ║
 ║   - GET  /api/portfolio/search             ║
 ║                                            ║
@@ -185,27 +191,23 @@ if (process.env.NODE_ENV !== 'test') {
         }
       }, 5 * 60 * 1000);
 
-      // Portfolio: refresh stale card prices every 30 minutes
+      // Background job: expire cancelled subscriptions past their period end (every hour)
       setInterval(async () => {
         try {
-          await refreshStalePrices({ maxAgeMs: 6 * 60 * 60 * 1000, batchSize: 30 });
-        } catch (err) {
-          console.error('[Portfolio] Price refresh error:', err.message);
-        }
-      }, 30 * 60 * 1000);
+          const { data, error } = await supabaseAdmin
+            .from('subscriptions')
+            .update({ status: 'expired' })
+            .eq('status', 'cancelled')
+            .lt('expires_at', new Date().toISOString())
+            .select('id');
 
-      // Portfolio: daily value snapshot every 24 hours (also run once on startup after 60s)
-      setTimeout(() => createDailySnapshots().catch(err =>
-        console.error('[Portfolio] Initial snapshot error:', err.message)
-      ), 60 * 1000);
-
-      setInterval(async () => {
-        try {
-          await createDailySnapshots();
+          if (!error && data && data.length > 0) {
+            console.log(`[Subscriptions] Expired ${data.length} cancelled subscription(s)`);
+          }
         } catch (err) {
-          console.error('[Portfolio] Snapshot error:', err.message);
+          console.error('[Subscriptions] Expiry cleanup error:', err.message);
         }
-      }, 24 * 60 * 60 * 1000);
+      }, 60 * 60 * 1000);
     }
   });
 }
