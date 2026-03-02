@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { authenticateSupabaseUser, requireRole } from '../middleware/auth.js';
 import { supabaseAdmin } from '../config/supabase.js';
 
 const router = Router();
@@ -161,7 +161,7 @@ router.post('/validate', async (req, res) => {
  *         description: Server error
  */
 // Get all discounts (admin only)
-router.get('/', authenticateToken, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
+router.get('/', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     if (!supabaseAdmin) {
       return res.json({ discounts: mockDiscounts });
@@ -229,7 +229,7 @@ router.get('/', authenticateToken, requireRole('super_admin', 'admin', 'manager'
  *         description: Server error
  */
 // Create discount (admin only)
-router.post('/', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.post('/', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     if (!supabaseAdmin) {
       return res.status(400).json({ error: 'Database not configured' });
@@ -295,7 +295,7 @@ router.post('/', authenticateToken, requireRole('super_admin', 'admin'), async (
  *         description: Server error
  */
 // Update discount (admin only)
-router.put('/:id', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.put('/:id', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -351,7 +351,7 @@ router.put('/:id', authenticateToken, requireRole('super_admin', 'admin'), async
  *         description: Server error
  */
 // Delete discount (admin only)
-router.delete('/:id', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.delete('/:id', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
 

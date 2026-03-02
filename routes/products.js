@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { authenticateSupabaseUser, requireRole } from '../middleware/auth.js';
 import { supabaseAdmin } from '../config/supabase.js';
 
 const router = Router();
@@ -186,7 +186,7 @@ router.get('/:id', async (req, res) => {
  *         description: Server error
  */
 // POST create product
-router.post('/', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.post('/', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const productData = req.body;
 
@@ -286,7 +286,7 @@ router.post('/', authenticateToken, requireRole('super_admin', 'admin'), async (
  *         description: Server error
  */
 // PUT update product
-router.put('/:id', authenticateToken, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
+router.put('/:id', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
     // Strip inventory/quantity fields — those go through the inventory endpoint
@@ -330,7 +330,7 @@ router.put('/:id', authenticateToken, requireRole('super_admin', 'admin', 'manag
  *         description: Server error
  */
 // DELETE product — also removes images from Supabase Storage
-router.delete('/:id', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.delete('/:id', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -406,7 +406,7 @@ router.delete('/:id', authenticateToken, requireRole('super_admin', 'admin'), as
  *         description: Server error
  */
 // PATCH inventory
-router.patch('/:id/inventory', authenticateToken, requireRole('super_admin', 'admin', 'manager', 'staff'), async (req, res) => {
+router.patch('/:id/inventory', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
     const { quantity, adjustment, low_stock_threshold } = req.body;

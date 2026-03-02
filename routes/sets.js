@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { authenticateSupabaseUser, requireRole } from '../middleware/auth.js';
 import { supabaseAdmin } from '../config/supabase.js';
 
 const router = Router();
@@ -128,7 +128,7 @@ router.get('/:id', async (req, res) => {
  *         description: Server error
  */
 // POST create set
-router.post('/', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.post('/', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const setData = req.body;
 
@@ -201,7 +201,7 @@ router.post('/', authenticateToken, requireRole('super_admin', 'admin'), async (
  *         description: Server error
  */
 // PUT update set
-router.put('/:id', authenticateToken, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
+router.put('/:id', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
@@ -244,7 +244,7 @@ router.put('/:id', authenticateToken, requireRole('super_admin', 'admin', 'manag
  *         description: Server error
  */
 // DELETE set
-router.delete('/:id', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.delete('/:id', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
     const { error } = await supabaseAdmin.from('sets').delete().eq('id', id);
@@ -290,7 +290,7 @@ router.delete('/:id', authenticateToken, requireRole('super_admin', 'admin'), as
  *         description: Server error
  */
 // POST reorder sets
-router.post('/reorder', authenticateToken, requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
+router.post('/reorder', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { orders } = req.body;
     await Promise.all(

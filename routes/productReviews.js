@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticateCustomer, optionalCustomerAuth, authenticateToken, requireRole } from '../middleware/auth.js';
+import { authenticateCustomer, optionalCustomerAuth, authenticateSupabaseUser, requireRole } from '../middleware/auth.js';
 import { supabaseAdmin } from '../config/supabase.js';
 
 const router = Router();
@@ -82,7 +82,7 @@ router.get('/product/:productId', optionalCustomerAuth, async (req, res) => {
     const enriched = [];
     for (const review of reviews || []) {
       const { data: customer } = await supabaseAdmin
-        .from('customers')
+        .from('profiles')
         .select('first_name, last_name')
         .eq('id', review.customer_id)
         .single();
@@ -166,7 +166,7 @@ router.get('/set/:setId', optionalCustomerAuth, async (req, res) => {
     const enriched = [];
     for (const review of reviews || []) {
       const { data: customer } = await supabaseAdmin
-        .from('customers')
+        .from('profiles')
         .select('first_name, last_name')
         .eq('id', review.customer_id)
         .single();
@@ -530,7 +530,7 @@ router.get('/my-reviews', authenticateCustomer, async (req, res) => {
 // ============================================
 
 // List all reviews (admin - includes flagged/unapproved)
-router.get('/admin/all', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.get('/admin/all', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
@@ -569,7 +569,7 @@ router.get('/admin/all', authenticateToken, requireRole('super_admin', 'admin'),
 });
 
 // Moderate a review (admin)
-router.patch('/:reviewId/moderate', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.patch('/:reviewId/moderate', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { reviewId } = req.params;
     const { is_approved, is_flagged } = req.body;

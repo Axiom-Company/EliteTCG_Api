@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
-import { authenticateToken, requireRole, authenticateCustomer, requireSeller } from '../middleware/auth.js';
+import { authenticateSupabaseUser, requireRole, authenticateCustomer, requireSeller } from '../middleware/auth.js';
 import { supabaseAdmin } from '../config/supabase.js';
 
 const router = Router();
@@ -69,7 +69,7 @@ const uploadToSupabase = async (buffer, mimetype, originalname, folder = 'produc
  *         description: Upload failed
  */
 // Upload single image (admin)
-router.post('/image', authenticateToken, requireRole('super_admin', 'admin', 'manager'), upload.single('image'), async (req, res) => {
+router.post('/image', authenticateSupabaseUser, requireRole('admin'), upload.single('image'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No image file provided' });
 
@@ -157,7 +157,7 @@ router.post('/seller-image', authenticateCustomer, requireSeller, upload.single(
  *         description: Upload failed
  */
 // Upload multiple images (admin)
-router.post('/images', authenticateToken, requireRole('super_admin', 'admin', 'manager'), upload.array('images', 5), async (req, res) => {
+router.post('/images', authenticateSupabaseUser, requireRole('admin'), upload.array('images', 5), async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'No image files provided' });
 
@@ -199,7 +199,7 @@ router.post('/images', authenticateToken, requireRole('super_admin', 'admin', 'm
  *         description: Delete failed
  */
 // Delete image from Supabase Storage
-router.delete('/:filename', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.delete('/:filename', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { filename } = req.params;
     // filename param may be just the name or include the folder prefix

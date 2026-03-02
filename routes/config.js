@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { authenticateSupabaseUser, requireRole } from '../middleware/auth.js';
 import { supabaseAdmin } from '../config/supabase.js';
 
 const router = Router();
@@ -148,7 +148,7 @@ router.get('/:key', async (req, res) => {
  *         description: Server error
  */
 // Update config (admin only)
-router.put('/:key', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.put('/:key', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { key } = req.params;
     const { value, is_active } = req.body;
@@ -217,7 +217,7 @@ router.put('/:key', authenticateToken, requireRole('super_admin', 'admin'), asyn
  *         description: Server error
  */
 // Create new config (admin only)
-router.post('/', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.post('/', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { key, value, type = 'string', description, is_active = true } = req.body;
 
@@ -271,7 +271,7 @@ router.post('/', authenticateToken, requireRole('super_admin', 'admin'), async (
  *         description: Server error
  */
 // Bulk update config (admin only)
-router.put('/', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.put('/', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const updates = req.body; // Object of { key: value }
 

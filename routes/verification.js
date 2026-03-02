@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
-import { authenticateCustomer, requireSeller, authenticateToken, requireRole } from '../middleware/auth.js';
+import { authenticateCustomer, requireSeller, authenticateSupabaseUser, requireRole } from '../middleware/auth.js';
 import { supabaseAdmin } from '../config/supabase.js';
 
 const router = Router();
@@ -214,7 +214,7 @@ router.get('/status', authenticateCustomer, requireSeller, async (req, res) => {
  *         description: Server error
  */
 // POST /:sellerId/approve - Admin approve verification
-router.post('/:sellerId/approve', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.post('/:sellerId/approve', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { sellerId } = req.params;
 
@@ -285,7 +285,7 @@ router.post('/:sellerId/approve', authenticateToken, requireRole('super_admin', 
  *         description: Server error
  */
 // POST /:sellerId/reject - Admin reject verification
-router.post('/:sellerId/reject', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.post('/:sellerId/reject', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { sellerId } = req.params;
 

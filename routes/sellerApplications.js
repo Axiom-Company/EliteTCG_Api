@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { authenticateSupabaseUser, requireRole } from '../middleware/auth.js';
 import { supabaseAdmin } from '../config/supabase.js';
 import { mockApplications, mockSellerProfiles } from './sellers.js';
 import { sendSellerApplicationApproved, sendSellerApplicationRejected } from '../utils/email.js';
@@ -7,8 +7,8 @@ import { sendSellerApplicationApproved, sendSellerApplicationRejected } from '..
 const router = Router();
 
 // All routes require admin authentication
-router.use(authenticateToken);
-router.use(requireRole('super_admin', 'admin', 'manager'));
+router.use(authenticateSupabaseUser);
+router.use(requireRole('admin'));
 
 /**
  * @openapi
@@ -56,7 +56,7 @@ router.get('/', async (req, res) => {
         .from('seller_applications')
         .select(`
           *,
-          customer:customers(id, email, first_name, last_name, phone)
+          customer:profiles(id, email, first_name, last_name, phone)
         `, { count: 'exact' });
 
       if (status) {
@@ -135,8 +135,8 @@ router.get('/:id', async (req, res) => {
         .from('seller_applications')
         .select(`
           *,
-          customer:customers(id, email, first_name, last_name, phone, created_at),
-          reviewer:admin_users(id, name, email)
+          customer:profiles(id, email, first_name, last_name, phone, created_at),
+          reviewer:profiles(id, name, email)
         `)
         .eq('id', id)
         .single();
@@ -234,12 +234,11 @@ router.post('/:id/approve', async (req, res) => {
         return res.status(500).json({ error: 'Failed to approve application' });
       }
 
-      // Update customer to be a seller
+      // Update profile to seller role
       const { error: customerError } = await supabaseAdmin
-        .from('customers')
+        .from('profiles')
         .update({
-          is_seller: true,
-          seller_verified_at: new Date().toISOString()
+          role: 'seller'
         })
         .eq('id', app.customer_id);
 
@@ -277,7 +276,7 @@ router.post('/:id/approve', async (req, res) => {
 
       // Send approval email to applicant
       const { data: approvedCustomer } = await supabaseAdmin
-        .from('customers')
+        .from('profiles')
         .select('email')
         .eq('id', app.customer_id)
         .single();
@@ -424,7 +423,7 @@ router.post('/:id/reject', async (req, res) => {
 
       // Send rejection email to applicant
       const { data: rejectedCustomer } = await supabaseAdmin
-        .from('customers')
+        .from('profiles')
         .select('email')
         .eq('id', app.customer_id)
         .single();

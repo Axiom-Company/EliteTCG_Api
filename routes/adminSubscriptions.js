@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { authenticateSupabaseUser, requireRole } from '../middleware/auth.js';
 import { supabaseAdmin } from '../config/supabase.js';
 import {
   sendSubscriptionBoxShipped,
@@ -10,7 +10,7 @@ import {
 const router = Router();
 
 // All admin subscription routes require admin authentication
-router.use(authenticateToken);
+router.use(authenticateSupabaseUser);
 
 // ============================================
 // TIER MANAGEMENT
@@ -68,7 +68,7 @@ const tierSchema = z.object({
  * POST /api/admin/subscriptions/tiers
  * Create a new subscription tier
  */
-router.post('/tiers', requireRole('super_admin', 'admin'), async (req, res) => {
+router.post('/tiers', requireRole('admin'), async (req, res) => {
   try {
     if (!supabaseAdmin) {
       return res.status(503).json({ error: 'Database connection required' });
@@ -104,7 +104,7 @@ router.post('/tiers', requireRole('super_admin', 'admin'), async (req, res) => {
  * PUT /api/admin/subscriptions/tiers/:id
  * Update a subscription tier
  */
-router.put('/tiers/:id', requireRole('super_admin', 'admin'), async (req, res) => {
+router.put('/tiers/:id', requireRole('admin'), async (req, res) => {
   try {
     if (!supabaseAdmin) {
       return res.status(503).json({ error: 'Database connection required' });
@@ -142,7 +142,7 @@ router.put('/tiers/:id', requireRole('super_admin', 'admin'), async (req, res) =
  * DELETE /api/admin/subscriptions/tiers/:id
  * Deactivate a tier (soft delete)
  */
-router.delete('/tiers/:id', requireRole('super_admin', 'admin'), async (req, res) => {
+router.delete('/tiers/:id', requireRole('admin'), async (req, res) => {
   try {
     if (!supabaseAdmin) {
       return res.status(503).json({ error: 'Database connection required' });
@@ -201,7 +201,7 @@ router.get('/', async (req, res) => {
       .select(`
         *,
         tier:subscription_tiers(id, name, slug, price),
-        customer:customers(id, email, name, first_name, last_name, phone)
+        customer:profiles(id, email, name, first_name, last_name, phone)
       `, { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + parseInt(limit) - 1);
@@ -330,7 +330,7 @@ router.get('/:id', async (req, res) => {
       .select(`
         *,
         tier:subscription_tiers(*),
-        customer:customers(id, email, name, first_name, last_name, phone, city, state, postal_code)
+        customer:profiles(id, email, name, first_name, last_name, phone, city, state, postal_code)
       `)
       .eq('id', id)
       .single();
@@ -386,7 +386,7 @@ router.get('/boxes', async (req, res) => {
       .select(`
         *,
         tier:subscription_tiers(id, name, slug),
-        customer:customers(id, email, name),
+        customer:profiles(id, email, name),
         items:subscription_box_items(*)
       `, { count: 'exact' })
       .order('created_at', { ascending: false })
@@ -423,7 +423,7 @@ router.get('/boxes', async (req, res) => {
  * Generate monthly boxes for all active subscriptions
  * Called at the start of each billing cycle
  */
-router.post('/generate-boxes', requireRole('super_admin', 'admin'), async (req, res) => {
+router.post('/generate-boxes', requireRole('admin'), async (req, res) => {
   try {
     if (!supabaseAdmin) {
       return res.status(503).json({ error: 'Database connection required' });
@@ -514,7 +514,7 @@ router.get('/boxes/:id', async (req, res) => {
       .select(`
         *,
         tier:subscription_tiers(*),
-        customer:customers(id, email, name, first_name, last_name, phone),
+        customer:profiles(id, email, name, first_name, last_name, phone),
         subscription:subscriptions(id, subscription_number),
         items:subscription_box_items(*)
       `)
@@ -536,7 +536,7 @@ router.get('/boxes/:id', async (req, res) => {
  * POST /api/admin/subscriptions/boxes/:id/items
  * Add items to a subscription box (curation)
  */
-router.post('/boxes/:id/items', requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
+router.post('/boxes/:id/items', requireRole('admin'), async (req, res) => {
   try {
     if (!supabaseAdmin) {
       return res.status(503).json({ error: 'Database connection required' });
@@ -617,7 +617,7 @@ router.post('/boxes/:id/items', requireRole('super_admin', 'admin', 'manager'), 
  * DELETE /api/admin/subscriptions/boxes/:boxId/items/:itemId
  * Remove an item from a box
  */
-router.delete('/boxes/:boxId/items/:itemId', requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
+router.delete('/boxes/:boxId/items/:itemId', requireRole('admin'), async (req, res) => {
   try {
     if (!supabaseAdmin) {
       return res.status(503).json({ error: 'Database connection required' });
@@ -646,7 +646,7 @@ router.delete('/boxes/:boxId/items/:itemId', requireRole('super_admin', 'admin',
  * POST /api/admin/subscriptions/boxes/:id/curate-bulk
  * Bulk curate: apply the same items to all boxes of a specific tier for a billing month
  */
-router.post('/boxes/:id/curate-bulk', requireRole('super_admin', 'admin'), async (req, res) => {
+router.post('/boxes/:id/curate-bulk', requireRole('admin'), async (req, res) => {
   try {
     if (!supabaseAdmin) {
       return res.status(503).json({ error: 'Database connection required' });
@@ -732,7 +732,7 @@ router.post('/boxes/:id/curate-bulk', requireRole('super_admin', 'admin'), async
  * PATCH /api/admin/subscriptions/boxes/:id/status
  * Update box status (packed, shipped, delivered)
  */
-router.patch('/boxes/:id/status', requireRole('super_admin', 'admin', 'manager', 'staff'), async (req, res) => {
+router.patch('/boxes/:id/status', requireRole('admin'), async (req, res) => {
   try {
     if (!supabaseAdmin) {
       return res.status(503).json({ error: 'Database connection required' });
@@ -748,7 +748,7 @@ router.patch('/boxes/:id/status', requireRole('super_admin', 'admin', 'manager',
 
     const { data: box } = await supabaseAdmin
       .from('subscription_boxes')
-      .select('*, customer:customers(id, email, name)')
+      .select('*, customer:profiles(id, email, name)')
       .eq('id', id)
       .single();
 
@@ -804,7 +804,7 @@ router.patch('/boxes/:id/status', requireRole('super_admin', 'admin', 'manager',
  * POST /api/admin/subscriptions/boxes/bulk-ship
  * Bulk ship multiple boxes
  */
-router.post('/boxes/bulk-ship', requireRole('super_admin', 'admin', 'manager'), async (req, res) => {
+router.post('/boxes/bulk-ship', requireRole('admin'), async (req, res) => {
   try {
     if (!supabaseAdmin) {
       return res.status(503).json({ error: 'Database connection required' });
@@ -837,7 +837,7 @@ router.post('/boxes/bulk-ship', requireRole('super_admin', 'admin', 'manager'), 
         })
         .eq('id', shipment.box_id)
         .eq('status', 'packed')
-        .select('*, customer:customers(id, email, name)')
+        .select('*, customer:profiles(id, email, name)')
         .single();
 
       if (error || !box) {

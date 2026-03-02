@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticateCustomer, optionalCustomerAuth, authenticateToken, requireRole } from '../middleware/auth.js';
+import { authenticateCustomer, optionalCustomerAuth, authenticateSupabaseUser, requireRole } from '../middleware/auth.js';
 import { supabaseAdmin } from '../config/supabase.js';
 
 const router = Router();
@@ -184,7 +184,7 @@ router.get('/sessions/:sessionId', optionalCustomerAuth, async (req, res) => {
 
     // Fetch customer name
     const { data: customer } = await supabaseAdmin
-      .from('customers')
+      .from('profiles')
       .select('first_name, last_name')
       .eq('id', session.customer_id)
       .single();
@@ -261,7 +261,7 @@ router.get('/sessions', optionalCustomerAuth, async (req, res) => {
     const enriched = [];
     for (const session of sessions || []) {
       const { data: customer } = await supabaseAdmin
-        .from('customers')
+        .from('profiles')
         .select('first_name, last_name')
         .eq('id', session.customer_id)
         .single();
@@ -469,7 +469,7 @@ router.get('/stats', async (req, res) => {
 });
 
 // Admin: Trigger pull rate recalculation for a set
-router.post('/stats/:setId/recalculate', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.post('/stats/:setId/recalculate', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { setId } = req.params;
 
@@ -488,7 +488,7 @@ router.post('/stats/:setId/recalculate', authenticateToken, requireRole('super_a
 });
 
 // Admin: Verify a pack opening session
-router.patch('/sessions/:sessionId/verify', authenticateToken, requireRole('super_admin', 'admin'), async (req, res) => {
+router.patch('/sessions/:sessionId/verify', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { sessionId } = req.params;
 

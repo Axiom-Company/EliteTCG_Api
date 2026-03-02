@@ -104,7 +104,7 @@ router.post('/register', async (req, res) => {
     if (supabase && supabaseAdmin) {
       // Check if customer already exists in our table
       const { data: existing } = await supabaseAdmin
-        .from('customers')
+        .from('profiles')
         .select('id')
         .eq('email', email.toLowerCase())
         .single();
@@ -142,9 +142,9 @@ router.post('/register', async (req, res) => {
 
       const authUserId = authData.user.id;
 
-      // Upsert profile into customers table (DB trigger may have already created the row)
+      // Upsert profile into profiles table (DB trigger may have already created the row)
       const { data: customer, error: upsertError } = await supabaseAdmin
-        .from('customers')
+        .from('profiles')
         .upsert({
           id: authUserId,
           email: email.toLowerCase(),
@@ -154,7 +154,7 @@ router.post('/register', async (req, res) => {
           phone: phone || null,
           accepts_marketing,
           is_active: true,
-          is_seller: false
+          role: 'user'
         }, { onConflict: 'id' })
         .select()
         .single();
@@ -177,7 +177,7 @@ router.post('/register', async (req, res) => {
           first_name: customer.first_name,
           last_name: customer.last_name,
           name: customer.name,
-          is_seller: customer.is_seller
+          role: customer.role
         }
       });
     } else {
@@ -196,7 +196,7 @@ router.post('/register', async (req, res) => {
         phone,
         accepts_marketing,
         is_active: true,
-        is_seller: false,
+        role: 'user',
         created_at: new Date().toISOString()
       };
       mockCustomers.push(customer);
@@ -210,7 +210,7 @@ router.post('/register', async (req, res) => {
           first_name: customer.first_name,
           last_name: customer.last_name,
           name: customer.name,
-          is_seller: customer.is_seller
+          role: customer.role
         }
       });
     }
@@ -276,7 +276,7 @@ router.post('/login', async (req, res) => {
 
       // Load customer profile from our table
       const { data: customer, error: profileError } = await supabaseAdmin
-        .from('customers')
+        .from('profiles')
         .select('*')
         .eq('id', authData.user.id)
         .eq('is_active', true)
@@ -288,7 +288,7 @@ router.post('/login', async (req, res) => {
 
       // Get seller profile if customer is a seller
       let sellerProfile = null;
-      if (customer.is_seller) {
+      if (['seller', 'verified_seller', 'admin'].includes(customer.role)) {
         sellerProfile = await getSellerProfile(customer.id);
       }
 
@@ -301,7 +301,7 @@ router.post('/login', async (req, res) => {
           first_name: customer.first_name,
           last_name: customer.last_name,
           name: customer.name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
-          is_seller: customer.is_seller,
+          role: customer.role,
           seller_id: sellerProfile?.id || null
         }
       });
@@ -320,7 +320,7 @@ router.post('/login', async (req, res) => {
           first_name: customer.first_name,
           last_name: customer.last_name,
           name: customer.name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
-          is_seller: customer.is_seller,
+          role: customer.role,
           seller_id: null
         }
       });
@@ -356,7 +356,7 @@ router.get('/me', authenticateCustomer, async (req, res) => {
 
     if (supabaseAdmin) {
       const { data, error } = await supabaseAdmin
-        .from('customers')
+        .from('profiles')
         .select('*')
         .eq('id', req.customer.id)
         .single();
@@ -375,7 +375,7 @@ router.get('/me', authenticateCustomer, async (req, res) => {
 
     // Get seller profile if customer is a seller
     let sellerProfile = null;
-    if (customer.is_seller && supabaseAdmin) {
+    if (['seller', 'verified_seller', 'admin'].includes(customer.role) && supabaseAdmin) {
       const { data } = await supabaseAdmin
         .from('seller_profiles')
         .select('*')
@@ -400,7 +400,7 @@ router.get('/me', authenticateCustomer, async (req, res) => {
         postal_code: customer.postal_code,
         country: customer.country,
         accepts_marketing: customer.accepts_marketing,
-        is_seller: customer.is_seller,
+        role: customer.role,
         seller_profile: sellerProfile ? {
           id: sellerProfile.id,
           display_name: sellerProfile.display_name,
@@ -476,7 +476,7 @@ router.put('/me', authenticateCustomer, async (req, res) => {
     if (updates.first_name || updates.last_name) {
       if (supabaseAdmin) {
         const { data: current } = await supabaseAdmin
-          .from('customers')
+          .from('profiles')
           .select('first_name, last_name')
           .eq('id', req.customer.id)
           .single();
@@ -491,7 +491,7 @@ router.put('/me', authenticateCustomer, async (req, res) => {
 
     if (supabaseAdmin) {
       const { data, error } = await supabaseAdmin
-        .from('customers')
+        .from('profiles')
         .update(updates)
         .eq('id', req.customer.id)
         .select()
@@ -528,7 +528,7 @@ router.put('/me', authenticateCustomer, async (req, res) => {
         city: customer.city,
         state: customer.state,
         postal_code: customer.postal_code,
-        is_seller: customer.is_seller
+        role: customer.role
       }
     });
   } catch (error) {

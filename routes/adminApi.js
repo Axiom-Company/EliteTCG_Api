@@ -2,14 +2,14 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateSupabaseUser } from '../middleware/auth.js';
 
 const router = express.Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ordersFilePath = path.join(__dirname, '..', 'data', 'orders.json');
 
 // All admin routes require a valid admin JWT
-router.use(authenticateToken);
+router.use(authenticateSupabaseUser);
 
 function loadOrders() {
   try {
