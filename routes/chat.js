@@ -388,8 +388,8 @@ router.post('/dm', authenticateCustomer, async (req, res) => {
     };
 
     res.status(existed ? 200 : 201).json({
-      channelSlug: channelKey,
-      recipient: recipientInfo,
+      channel_id: channelKey,
+      other_user: recipientInfo,
       created: !existed,
     });
   } catch (error) {

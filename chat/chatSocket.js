@@ -187,22 +187,32 @@ export function initChatSocket(httpServer, allowedOrigins) {
         }
 
         const slug = channelSlug.trim();
-        socket.join(slug);
+        const isDMJoin = slug.startsWith('dm-');
 
-        // Send channel history
-        const messages = chatBuffer.getMessages(slug, 50);
-        socket.emit('channel:history', { channelSlug: slug, messages });
+        if (isDMJoin) {
+          // DM: verify participant, join room, send dmBuffer history
+          if (!dmBuffer.isParticipant(slug, user.id)) {
+            return socket.emit('error', { message: 'You are not a member of this DM' });
+          }
+          socket.join(slug);
+          const dmHistory = dmBuffer.getMessages(slug, 50);
+          socket.emit('channel:history', { channelSlug: slug, messages: dmHistory });
+        } else {
+          // Public channel: join room, send chatBuffer history, system message
+          socket.join(slug);
+          const messages = chatBuffer.getMessages(slug, 50);
+          socket.emit('channel:history', { channelSlug: slug, messages });
 
-        // System join message
-        const systemMsg = chatBuffer.addMessage(slug, {
-          userId: 'system',
-          authorName: 'System',
-          avatarUrl: null,
-          userRole: 'system',
-          content: `${user.name} joined the channel`,
-          isSystem: true,
-        });
-        io.to(slug).emit('message:new', { channelSlug: slug, message: systemMsg });
+          const systemMsg = chatBuffer.addMessage(slug, {
+            userId: 'system',
+            authorName: 'System',
+            avatarUrl: null,
+            userRole: 'system',
+            content: `${user.name} joined the channel`,
+            isSystem: true,
+          });
+          io.to(slug).emit('message:new', { channelSlug: slug, message: systemMsg });
+        }
       } catch (err) {
         console.error('[ChatSocket] channel:join error:', err.message);
         socket.emit('error', { message: 'Failed to join channel' });
@@ -439,7 +449,8 @@ export function initChatSocket(httpServer, allowedOrigins) {
       if (!channelSlug || typeof channelSlug !== 'string') return;
       socket.to(channelSlug.trim()).emit('typing:update', {
         channelSlug: channelSlug.trim(),
-        user: { id: user.id, name: user.name },
+        userId: user.id,
+        userName: user.name,
       });
     });
 
