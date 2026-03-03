@@ -1,6 +1,7 @@
 import { Server } from 'socket.io';
 import { supabaseAdmin } from '../config/supabase.js';
 import { chatBuffer } from './chatBuffer.js';
+import { dmBuffer } from './dmBuffer.js';
 
 // ── Presence tracking ────────────────────────────────────────────────────────
 const onlineUsers = new Map();
@@ -251,28 +252,18 @@ export function initChatSocket(httpServer, allowedOrigins) {
         const isDM = slug.startsWith('dm-');
 
         if (isDM) {
-          // DM: persist to Supabase
-          if (!supabaseAdmin) {
-            return socket.emit('error', { message: 'DM service unavailable' });
-          }
+          // DM: use in-memory buffer (backed up to storage periodically)
+          const dmMsg = dmBuffer.addMessage(slug, {
+            userId: user.id,
+            authorName: user.name,
+            avatarUrl: user.avatarUrl,
+            userRole: user.role,
+            content: clean,
+            replyTo: replyTo || null,
+          });
 
-          const { data: dmMsg, error: dmErr } = await supabaseAdmin
-            .from('chat_dm_messages')
-            .insert({
-              channel_slug: slug,
-              user_id: user.id,
-              author_name: user.name,
-              avatar_url: user.avatarUrl,
-              role: user.role,
-              content: clean,
-              reply_to: replyTo || null,
-            })
-            .select()
-            .single();
-
-          if (dmErr) {
-            console.error('[ChatSocket] DM insert error:', dmErr.message);
-            return socket.emit('error', { message: 'Failed to send message' });
+          if (!dmMsg) {
+            return socket.emit('error', { message: 'DM conversation not found' });
           }
 
           io.to(slug).emit('message:new', { channelSlug: slug, message: dmMsg });
@@ -311,23 +302,12 @@ export function initChatSocket(httpServer, allowedOrigins) {
         const isDM = slug.startsWith('dm-');
 
         if (isDM) {
-          if (!supabaseAdmin) {
-            return socket.emit('error', { message: 'DM service unavailable' });
-          }
-
-          const { data: updated, error } = await supabaseAdmin
-            .from('chat_dm_messages')
-            .update({ content: clean, is_edited: true, edited_at: new Date().toISOString() })
-            .eq('id', messageId)
-            .eq('user_id', user.id)
-            .select()
-            .single();
-
-          if (error || !updated) {
+          const edited = dmBuffer.editMessage(slug, messageId, user.id, clean);
+          if (!edited) {
             return socket.emit('error', { message: 'Cannot edit this message' });
           }
 
-          io.to(slug).emit('message:edited', { channelSlug: slug, message: updated });
+          io.to(slug).emit('message:edited', { channelSlug: slug, message: edited });
         } else {
           const edited = chatBuffer.editMessage(slug, messageId, user.id, clean);
           if (!edited) {
@@ -353,36 +333,15 @@ export function initChatSocket(httpServer, allowedOrigins) {
         const isDM = slug.startsWith('dm-');
         const userIsModAdmin = isModOrAdmin(user.role);
 
-        if (isDM) {
-          if (!supabaseAdmin) {
-            return socket.emit('error', { message: 'DM service unavailable' });
-          }
+        const deleted = isDM
+          ? dmBuffer.deleteMessage(slug, messageId, user.id, userIsModAdmin)
+          : chatBuffer.deleteMessage(slug, messageId, user.id, userIsModAdmin);
 
-          // Build the soft-delete query -- own message OR mod/admin
-          let query = supabaseAdmin
-            .from('chat_dm_messages')
-            .update({ is_deleted: true, content: '' })
-            .eq('id', messageId);
-
-          if (!userIsModAdmin) {
-            query = query.eq('user_id', user.id);
-          }
-
-          const { data: deleted, error } = await query.select().single();
-
-          if (error || !deleted) {
-            return socket.emit('error', { message: 'Cannot delete this message' });
-          }
-
-          io.to(slug).emit('message:deleted', { channelSlug: slug, messageId });
-        } else {
-          const deleted = chatBuffer.deleteMessage(slug, messageId, user.id, userIsModAdmin);
-          if (!deleted) {
-            return socket.emit('error', { message: 'Cannot delete this message' });
-          }
-
-          io.to(slug).emit('message:deleted', { channelSlug: slug, messageId });
+        if (!deleted) {
+          return socket.emit('error', { message: 'Cannot delete this message' });
         }
+
+        io.to(slug).emit('message:deleted', { channelSlug: slug, messageId });
       } catch (err) {
         console.error('[ChatSocket] message:delete error:', err.message);
         socket.emit('error', { message: 'Failed to delete message' });

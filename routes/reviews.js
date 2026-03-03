@@ -184,7 +184,7 @@ router.get('/seller/:sellerId', optionalCustomerAuth, async (req, res) => {
       let reviewerName = 'Anonymous';
 
       const { data: customer } = await supabaseAdmin
-        .from('customers')
+        .from('profiles')
         .select('first_name, last_name')
         .eq('id', review.reviewer_id)
         .single();

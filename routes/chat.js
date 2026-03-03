@@ -5,6 +5,7 @@ import path from 'path';
 import { authenticateCustomer, optionalCustomerAuth, authenticateSupabaseUser, requireRole } from '../middleware/auth.js';
 import { supabaseAdmin } from '../config/supabase.js';
 import { chatBuffer } from '../chat/chatBuffer.js';
+import { dmBuffer, makeDMKey } from '../chat/dmBuffer.js';
 import { getOnlineUsers } from '../chat/chatSocket.js';
 
 const router = Router();
@@ -121,16 +122,6 @@ async function getChannelBySlug(slug) {
   return data;
 }
 
-async function verifyDmMembership(channelId, userId) {
-  const { data, error } = await supabaseAdmin
-    .from('chat_members')
-    .select('id')
-    .eq('channel_id', channelId)
-    .eq('user_id', userId)
-    .single();
-
-  return !error && !!data;
-}
 
 async function uploadToSupabase(buffer, mimetype, originalname, folder = 'chat') {
   const ext = path.extname(originalname);
@@ -356,10 +347,10 @@ router.get('/channels/:slug/members', authenticateCustomer, async (req, res) => 
 });
 
 // ============================================
-// DM ENDPOINTS
+// DM ENDPOINTS (in-memory buffer backed by Supabase Storage)
 // ============================================
 
-// POST /dm - create or get existing DM channel
+// POST /dm - get or create DM conversation
 router.post('/dm', authenticateCustomer, async (req, res) => {
   try {
     const validation = createDmSchema.safeParse(req.body);
@@ -374,7 +365,6 @@ router.post('/dm', authenticateCustomer, async (req, res) => {
       return res.status(400).json({ error: 'Cannot create a DM with yourself' });
     }
 
-    // Verify the recipient exists
     const { data: recipientProfile } = await supabaseAdmin
       .from('profiles')
       .select('id, first_name, last_name, avatar_url')
@@ -385,98 +375,22 @@ router.post('/dm', authenticateCustomer, async (req, res) => {
       return res.status(404).json({ error: 'Recipient not found' });
     }
 
-    // Check if a DM channel already exists between these two users.
-    // Find channels where the sender is a member...
-    const { data: senderChannels } = await supabaseAdmin
-      .from('chat_members')
-      .select('channel_id')
-      .eq('user_id', senderId);
+    const dmKey = makeDMKey(senderId, recipient_id);
+    const existed = dmBuffer.isParticipant(dmKey, senderId);
+    const { channelKey } = dmBuffer.getOrCreateConversation(senderId, recipient_id);
 
-    let existingChannelId = null;
+    const recipientInfo = {
+      id: recipientProfile.id,
+      name: [recipientProfile.first_name, recipientProfile.last_name
+        ? recipientProfile.last_name.charAt(0) + '.' : null]
+        .filter(Boolean).join(' ') || 'Anonymous',
+      avatar_url: recipientProfile.avatar_url || null,
+    };
 
-    if (senderChannels && senderChannels.length > 0) {
-      const channelIds = senderChannels.map(m => m.channel_id);
-
-      // ...then check which of those channels also have the recipient as a member
-      // and are of type 'dm'
-      for (const cId of channelIds) {
-        const { data: channelData } = await supabaseAdmin
-          .from('chat_channels')
-          .select('id, channel_type')
-          .eq('id', cId)
-          .eq('channel_type', 'dm')
-          .single();
-
-        if (!channelData) continue;
-
-        const { data: recipientMember } = await supabaseAdmin
-          .from('chat_members')
-          .select('id')
-          .eq('channel_id', cId)
-          .eq('user_id', recipient_id)
-          .single();
-
-        if (recipientMember) {
-          existingChannelId = cId;
-          break;
-        }
-      }
-    }
-
-    if (existingChannelId) {
-      const { data: existingChannel } = await supabaseAdmin
-        .from('chat_channels')
-        .select('*')
-        .eq('id', existingChannelId)
-        .single();
-
-      const recipientInfo = await getProfileInfo(recipient_id);
-
-      return res.json({
-        channel: existingChannel,
-        recipient: recipientInfo,
-        created: false,
-      });
-    }
-
-    // Create new DM channel
-    const { data: newChannel, error: channelError } = await supabaseAdmin
-      .from('chat_channels')
-      .insert({
-        name: `dm-${senderId}-${recipient_id}`,
-        slug: `dm-${Date.now()}-${Math.round(Math.random() * 1e6)}`,
-        channel_type: 'dm',
-        is_active: true,
-      })
-      .select()
-      .single();
-
-    if (channelError) {
-      console.error('Create DM channel error:', channelError);
-      return res.status(500).json({ error: 'Failed to create DM channel' });
-    }
-
-    // Add both users as members
-    const { error: memberError } = await supabaseAdmin
-      .from('chat_members')
-      .insert([
-        { channel_id: newChannel.id, user_id: senderId },
-        { channel_id: newChannel.id, user_id: recipient_id },
-      ]);
-
-    if (memberError) {
-      console.error('Add DM members error:', memberError);
-      // Attempt cleanup
-      await supabaseAdmin.from('chat_channels').delete().eq('id', newChannel.id);
-      return res.status(500).json({ error: 'Failed to create DM channel' });
-    }
-
-    const recipientInfo = await getProfileInfo(recipient_id);
-
-    res.status(201).json({
-      channel: newChannel,
+    res.status(existed ? 200 : 201).json({
+      channelSlug: channelKey,
       recipient: recipientInfo,
-      created: true,
+      created: !existed,
     });
   } catch (error) {
     console.error('Create DM error:', error);
@@ -484,89 +398,26 @@ router.post('/dm', authenticateCustomer, async (req, res) => {
   }
 });
 
-// GET /dm - list user's DM channels
+// GET /dm - list user's DM conversations
 router.get('/dm', authenticateCustomer, async (req, res) => {
   try {
     const userId = req.customer.id;
+    const conversations = dmBuffer.getConversationsForUser(userId);
 
-    // Get all channels the user is a member of
-    const { data: memberships, error: memberError } = await supabaseAdmin
-      .from('chat_members')
-      .select('channel_id')
-      .eq('user_id', userId);
-
-    if (memberError) {
-      console.error('List DMs member query error:', memberError);
-      return res.status(500).json({ error: 'Failed to fetch DMs' });
-    }
-
-    if (!memberships || memberships.length === 0) {
-      return res.json({ dms: [] });
-    }
-
-    const channelIds = memberships.map(m => m.channel_id);
-
-    // Filter to DM-type channels only
-    const { data: dmChannels, error: channelError } = await supabaseAdmin
-      .from('chat_channels')
-      .select('*')
-      .in('id', channelIds)
-      .eq('channel_type', 'dm');
-
-    if (channelError) {
-      console.error('List DMs channel query error:', channelError);
-      return res.status(500).json({ error: 'Failed to fetch DMs' });
-    }
-
-    if (!dmChannels || dmChannels.length === 0) {
-      return res.json({ dms: [] });
-    }
-
-    // For each DM channel, get the other member's profile and last message
+    const profileCache = new Map();
     const dms = [];
 
-    for (const channel of dmChannels) {
-      // Get the other member
-      const { data: members } = await supabaseAdmin
-        .from('chat_members')
-        .select('user_id')
-        .eq('channel_id', channel.id)
-        .neq('user_id', userId);
-
-      const otherUserId = members && members.length > 0 ? members[0].user_id : null;
-      const otherProfile = otherUserId ? await getProfileInfo(otherUserId) : null;
-
-      // Get the last message
-      const { data: lastMessages } = await supabaseAdmin
-        .from('chat_dm_messages')
-        .select('id, content, author_id, created_at, is_deleted')
-        .eq('channel_id', channel.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      const lastMessage = lastMessages && lastMessages.length > 0 ? lastMessages[0] : null;
-
+    for (const conv of conversations) {
+      if (!profileCache.has(conv.other_user_id)) {
+        profileCache.set(conv.other_user_id, await getProfileInfo(conv.other_user_id));
+      }
       dms.push({
-        channel,
-        recipient: otherProfile,
-        last_message: lastMessage
-          ? {
-              id: lastMessage.id,
-              content: lastMessage.is_deleted ? '' : lastMessage.content,
-              author_id: lastMessage.author_id,
-              created_at: lastMessage.created_at,
-              is_deleted: lastMessage.is_deleted,
-            }
-          : null,
+        channelSlug: conv.channel_id,
+        recipient: profileCache.get(conv.other_user_id),
+        last_message: conv.last_message,
+        last_message_at: conv.last_message_at,
       });
     }
-
-    // Sort by last message time (most recent first), channels with no messages go to the end
-    dms.sort((a, b) => {
-      const aTime = a.last_message?.created_at || a.channel.created_at;
-      const bTime = b.last_message?.created_at || b.channel.created_at;
-      return new Date(bTime) - new Date(aTime);
-    });
 
     res.json({ dms });
   } catch (error) {
@@ -575,63 +426,24 @@ router.get('/dm', authenticateCustomer, async (req, res) => {
   }
 });
 
-// GET /dm/:channelId/messages - paginated DM message history
+// GET /dm/:channelId/messages - DM message history
 router.get('/dm/:channelId/messages', authenticateCustomer, async (req, res) => {
   try {
     const { channelId } = req.params;
     const userId = req.customer.id;
 
-    // Verify membership
-    const isMember = await verifyDmMembership(channelId, userId);
-    if (!isMember) {
-      return res.status(403).json({ error: 'Not a member of this DM channel' });
+    if (!dmBuffer.isParticipant(channelId, userId)) {
+      return res.status(403).json({ error: 'Not a member of this DM' });
     }
 
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || DM_MESSAGE_LIMIT));
-    const before = req.query.before; // ISO timestamp cursor
+    const before = req.query.before;
 
-    let query = supabaseAdmin
-      .from('chat_dm_messages')
-      .select('*')
-      .eq('channel_id', channelId)
-      .order('created_at', { ascending: false })
-      .limit(limit + 1); // fetch one extra to determine has_more
-
-    if (before) {
-      query = query.lt('created_at', before);
-    }
-
-    const { data: messages, error } = await query;
-
-    if (error) {
-      console.error('Get DM messages error:', error);
-      return res.status(500).json({ error: 'Failed to fetch messages' });
-    }
-
-    const hasMore = messages && messages.length > limit;
-    const result = (messages || []).slice(0, limit);
-
-    // Enrich with author profile info
-    const authorCache = new Map();
-    const enriched = [];
-
-    for (const msg of result) {
-      if (!authorCache.has(msg.author_id)) {
-        authorCache.set(msg.author_id, await getProfileInfo(msg.author_id));
-      }
-      const author = authorCache.get(msg.author_id);
-
-      enriched.push({
-        ...msg,
-        content: msg.is_deleted ? '' : msg.content,
-        author_name: author.name,
-        author_avatar_url: author.avatar_url,
-      });
-    }
+    const messages = dmBuffer.getMessages(channelId, limit, before);
 
     res.json({
-      messages: enriched,
-      has_more: hasMore,
+      messages: messages.map(m => ({ ...m, content: m.is_deleted ? '' : m.content })),
+      has_more: messages.length === limit,
     });
   } catch (error) {
     console.error('Get DM messages error:', error);
@@ -639,16 +451,14 @@ router.get('/dm/:channelId/messages', authenticateCustomer, async (req, res) => 
   }
 });
 
-// POST /dm/:channelId/messages - send a DM message
+// POST /dm/:channelId/messages - send a DM via REST (socket is preferred)
 router.post('/dm/:channelId/messages', authenticateCustomer, async (req, res) => {
   try {
     const { channelId } = req.params;
     const userId = req.customer.id;
 
-    // Verify membership
-    const isMember = await verifyDmMembership(channelId, userId);
-    if (!isMember) {
-      return res.status(403).json({ error: 'Not a member of this DM channel' });
+    if (!dmBuffer.isParticipant(channelId, userId)) {
+      return res.status(403).json({ error: 'Not a member of this DM' });
     }
 
     const validation = dmMessageSchema.safeParse(req.body);
@@ -656,32 +466,21 @@ router.post('/dm/:channelId/messages', authenticateCustomer, async (req, res) =>
       return res.status(400).json({ error: 'Validation failed', details: validation.error.errors });
     }
 
-    const { content } = validation.data;
-
-    const { data: message, error } = await supabaseAdmin
-      .from('chat_dm_messages')
-      .insert({
-        channel_id: channelId,
-        author_id: userId,
-        content,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Send DM error:', error);
-      return res.status(500).json({ error: 'Failed to send message' });
-    }
-
     const authorInfo = await getProfileInfo(userId);
 
-    res.status(201).json({
-      message: {
-        ...message,
-        author_name: authorInfo.name,
-        author_avatar_url: authorInfo.avatar_url,
-      },
+    const message = dmBuffer.addMessage(channelId, {
+      userId,
+      authorName: authorInfo.name,
+      avatarUrl: authorInfo.avatar_url,
+      userRole: 'user',
+      content: validation.data.content,
     });
+
+    if (!message) {
+      return res.status(404).json({ error: 'DM conversation not found' });
+    }
+
+    res.status(201).json({ message });
   } catch (error) {
     console.error('Send DM error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -694,10 +493,8 @@ router.put('/dm/:channelId/messages/:msgId', authenticateCustomer, async (req, r
     const { channelId, msgId } = req.params;
     const userId = req.customer.id;
 
-    // Verify membership
-    const isMember = await verifyDmMembership(channelId, userId);
-    if (!isMember) {
-      return res.status(403).json({ error: 'Not a member of this DM channel' });
+    if (!dmBuffer.isParticipant(channelId, userId)) {
+      return res.status(403).json({ error: 'Not a member of this DM' });
     }
 
     const validation = editDmMessageSchema.safeParse(req.body);
@@ -705,45 +502,12 @@ router.put('/dm/:channelId/messages/:msgId', authenticateCustomer, async (req, r
       return res.status(400).json({ error: 'Validation failed', details: validation.error.errors });
     }
 
-    // Verify the message exists and is owned by this user
-    const { data: existing } = await supabaseAdmin
-      .from('chat_dm_messages')
-      .select('id, author_id, is_deleted')
-      .eq('id', msgId)
-      .eq('channel_id', channelId)
-      .single();
-
-    if (!existing) {
-      return res.status(404).json({ error: 'Message not found' });
+    const edited = dmBuffer.editMessage(channelId, msgId, userId, validation.data.content);
+    if (!edited) {
+      return res.status(403).json({ error: 'Cannot edit this message' });
     }
 
-    if (existing.author_id !== userId) {
-      return res.status(403).json({ error: 'Not authorized to edit this message' });
-    }
-
-    if (existing.is_deleted) {
-      return res.status(400).json({ error: 'Cannot edit a deleted message' });
-    }
-
-    const { content } = validation.data;
-
-    const { data: updated, error } = await supabaseAdmin
-      .from('chat_dm_messages')
-      .update({
-        content,
-        is_edited: true,
-        edited_at: new Date().toISOString(),
-      })
-      .eq('id', msgId)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Edit DM error:', error);
-      return res.status(500).json({ error: 'Failed to edit message' });
-    }
-
-    res.json({ message: updated });
+    res.json({ message: edited });
   } catch (error) {
     console.error('Edit DM error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -756,52 +520,28 @@ router.delete('/dm/:channelId/messages/:msgId', authenticateCustomer, async (req
     const { channelId, msgId } = req.params;
     const userId = req.customer.id;
 
-    // Verify membership
-    const isMember = await verifyDmMembership(channelId, userId);
-    if (!isMember) {
-      return res.status(403).json({ error: 'Not a member of this DM channel' });
+    if (!dmBuffer.isParticipant(channelId, userId)) {
+      return res.status(403).json({ error: 'Not a member of this DM' });
     }
 
-    // Get the message
-    const { data: existing } = await supabaseAdmin
-      .from('chat_dm_messages')
-      .select('id, author_id, is_deleted')
-      .eq('id', msgId)
-      .eq('channel_id', channelId)
-      .single();
+    let deleted = dmBuffer.deleteMessage(channelId, msgId, userId, false);
 
-    if (!existing) {
-      return res.status(404).json({ error: 'Message not found' });
-    }
-
-    if (existing.is_deleted) {
-      return res.status(400).json({ error: 'Message already deleted' });
-    }
-
-    // Check ownership. Also allow admins (check if the user has an admin profile).
-    let isAdmin = false;
-    if (existing.author_id !== userId) {
+    if (!deleted) {
       const { data: profile } = await supabaseAdmin
         .from('profiles')
         .select('role')
         .eq('id', userId)
         .single();
 
-      isAdmin = profile && ['admin', 'super_admin'].includes(profile.role);
-
+      const isAdmin = profile && ['admin', 'super_admin'].includes(profile.role);
       if (!isAdmin) {
         return res.status(403).json({ error: 'Not authorized to delete this message' });
       }
-    }
 
-    const { error } = await supabaseAdmin
-      .from('chat_dm_messages')
-      .update({ is_deleted: true })
-      .eq('id', msgId);
-
-    if (error) {
-      console.error('Delete DM error:', error);
-      return res.status(500).json({ error: 'Failed to delete message' });
+      deleted = dmBuffer.deleteMessage(channelId, msgId, userId, true);
+      if (!deleted) {
+        return res.status(404).json({ error: 'Message not found' });
+      }
     }
 
     res.json({ message: 'Message deleted' });
@@ -817,10 +557,8 @@ router.post('/dm/:channelId/upload', authenticateCustomer, dmUpload.single('imag
     const { channelId } = req.params;
     const userId = req.customer.id;
 
-    // Verify membership
-    const isMember = await verifyDmMembership(channelId, userId);
-    if (!isMember) {
-      return res.status(403).json({ error: 'Not a member of this DM channel' });
+    if (!dmBuffer.isParticipant(channelId, userId)) {
+      return res.status(403).json({ error: 'Not a member of this DM' });
     }
 
     if (!req.file) {

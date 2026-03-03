@@ -89,7 +89,7 @@ router.get('/', optionalCustomerAuth, async (req, res) => {
 
       if (post.author_id) {
         const { data: customer } = await supabaseAdmin
-          .from('customers')
+          .from('profiles')
           .select('first_name, last_name')
           .eq('id', post.author_id)
           .single();
@@ -149,7 +149,7 @@ router.get('/by-slug/:slug', optionalCustomerAuth, async (req, res) => {
     let authorName = 'EliteTCG';
     if (post.author_id) {
       const { data: customer } = await supabaseAdmin
-        .from('customers')
+        .from('profiles')
         .select('first_name, last_name')
         .eq('id', post.author_id)
         .single();
@@ -226,7 +226,7 @@ router.get('/:postId', optionalCustomerAuth, async (req, res) => {
     let authorName = 'EliteTCG';
     if (post.author_id) {
       const { data: customer } = await supabaseAdmin
-        .from('customers')
+        .from('profiles')
         .select('first_name, last_name')
         .eq('id', post.author_id)
         .single();
@@ -295,7 +295,7 @@ router.get('/:postId/comments', optionalCustomerAuth, async (req, res) => {
     const enriched = [];
     for (const comment of comments || []) {
       const { data: customer } = await supabaseAdmin
-        .from('customers')
+        .from('profiles')
         .select('first_name, last_name')
         .eq('id', comment.customer_id)
         .single();
@@ -311,7 +311,7 @@ router.get('/:postId/comments', optionalCustomerAuth, async (req, res) => {
       const enrichedReplies = [];
       for (const reply of replies || []) {
         const { data: replyCustomer } = await supabaseAdmin
-          .from('customers')
+          .from('profiles')
           .select('first_name, last_name')
           .eq('id', reply.customer_id)
           .single();

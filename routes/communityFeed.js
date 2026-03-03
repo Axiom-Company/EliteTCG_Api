@@ -232,7 +232,7 @@ router.get('/stats', async (req, res) => {
       listingCount,
       totalPacksResult
     ] = await Promise.all([
-      supabaseAdmin.from('customers').select('id', { count: 'exact', head: true }),
+      supabaseAdmin.from('profiles').select('id', { count: 'exact', head: true }),
       supabaseAdmin.from('product_reviews').select('id', { count: 'exact', head: true }).eq('is_approved', true),
       supabaseAdmin.from('pack_opening_sessions').select('id', { count: 'exact', head: true }).eq('is_public', true),
       supabaseAdmin.from('discussion_threads').select('id', { count: 'exact', head: true }),
@@ -358,7 +358,7 @@ router.get('/trending', async (req, res) => {
 async function getCustomerName(customerId) {
   try {
     const { data: customer } = await supabaseAdmin
-      .from('customers')
+      .from('profiles')
       .select('first_name, last_name')
       .eq('id', customerId)
       .single();

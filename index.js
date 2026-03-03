@@ -50,6 +50,7 @@ import chatRoutes from './routes/chat.js';
 import { supabaseAdmin } from './config/supabase.js';
 import { createDailySnapshots, refreshStalePrices } from './utils/portfolioJobs.js';
 import { initChatSocket } from './chat/chatSocket.js';
+import { dmBuffer } from './chat/dmBuffer.js';
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -169,6 +170,14 @@ const server = createServer(app);
 // Initialize Socket.io chat server
 initChatSocket(server, allowedOrigins);
 
+// Load DM conversations from Storage and start periodic backup
+dmBuffer.loadFromStorage().then(() => {
+  dmBuffer.startBackupInterval();
+}).catch(err => {
+  console.error('[DMBuffer] Startup load error:', err.message);
+  dmBuffer.startBackupInterval();
+});
+
 // Start server (for standalone deployment)
 if (process.env.NODE_ENV !== 'test') {
   server.listen(PORT, '0.0.0.0', () => {
@@ -225,17 +234,6 @@ if (process.env.NODE_ENV !== 'test') {
         }
       }, 60 * 60 * 1000);
 
-      // Background job: purge old DM messages (daily)
-      setInterval(async () => {
-        try {
-          const { data, error } = await supabaseAdmin.rpc('purge_old_dm_messages', { retention_days: 180 });
-          if (!error && data > 0) {
-            console.log(`[Chat Cleanup] Purged ${data} old DM message(s)`);
-          }
-        } catch (err) {
-          console.error('[Chat Cleanup] DM purge error:', err.message);
-        }
-      }, 24 * 60 * 60 * 1000);
     }
   });
 }

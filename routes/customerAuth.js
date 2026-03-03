@@ -142,12 +142,13 @@ router.post('/register', async (req, res) => {
 
       const authUserId = authData.user.id;
 
-      // Upsert profile into profiles table (DB trigger may have already created the row)
-      const { data: customer, error: upsertError } = await supabaseAdmin
+      // Update profile fields (DB trigger already created the row from auth.users INSERT)
+      // Small delay to ensure trigger has fired
+      await new Promise(r => setTimeout(r, 200));
+
+      const { data: customer, error: updateError } = await supabaseAdmin
         .from('profiles')
-        .upsert({
-          id: authUserId,
-          email: email.toLowerCase(),
+        .update({
           first_name,
           last_name,
           name: `${first_name} ${last_name}`,
@@ -155,12 +156,13 @@ router.post('/register', async (req, res) => {
           accepts_marketing,
           is_active: true,
           role: 'user'
-        }, { onConflict: 'id' })
+        })
+        .eq('id', authUserId)
         .select()
         .single();
 
-      if (upsertError) {
-        console.error('Customer upsert error:', upsertError);
+      if (updateError) {
+        console.error('Customer update error:', updateError);
         return res.status(500).json({ error: 'Failed to create account profile' });
       }
 

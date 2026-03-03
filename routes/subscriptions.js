@@ -173,7 +173,7 @@ router.post('/subscribe', authenticateCustomer, async (req, res) => {
 
     // Get customer details
     const { data: customer } = await supabaseAdmin
-      .from('customers')
+      .from('profiles')
       .select('email, name, first_name, last_name, phone')
       .eq('id', req.customer.id)
       .single();
@@ -491,7 +491,7 @@ router.patch('/my/:id/cancel', authenticateCustomer, async (req, res) => {
 
     // Get customer for email
     const { data: customer } = await supabaseAdmin
-      .from('customers')
+      .from('profiles')
       .select('email, name')
       .eq('id', req.customer.id)
       .single();
@@ -952,7 +952,7 @@ router.post('/notify', async (req, res) => {
 
       // Send confirmation email
       const { data: customer } = await supabaseAdmin
-        .from('customers')
+        .from('profiles')
         .select('email, name')
         .eq('id', subscription.customer_id)
         .single();
