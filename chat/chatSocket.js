@@ -89,7 +89,7 @@ async function getMemberRole(channelId, userId) {
 function buildPresenceList() {
   const list = [];
   for (const [userId, info] of onlineUsers) {
-    list.push({ userId, name: info.name, avatarUrl: info.avatarUrl });
+    list.push({ id: userId, name: info.name, avatar_url: info.avatarUrl });
   }
   return list;
 }

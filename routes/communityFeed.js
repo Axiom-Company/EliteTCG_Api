@@ -180,7 +180,7 @@ router.get('/activity', optionalCustomerAuth, async (req, res) => {
       if (post.author_id) {
         authorName = await getCustomerName(post.author_id);
       } else if (post.admin_author_id) {
-        const { data: admin } = await supabaseAdmin.from('admin_users').select('name').eq('id', post.admin_author_id).single();
+        const { data: admin } = await supabaseAdmin.from('profiles').select('name').eq('id', post.admin_author_id).single();
         if (admin) authorName = admin.name;
       }
 

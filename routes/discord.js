@@ -43,7 +43,7 @@ router.get('/link', async (req, res) => {
 });
 
 // Update Discord invite link (admin)
-router.put('/link', authenticateSupabaseUser, requireRole('super_admin', 'admin'), async (req, res) => {
+router.put('/link', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const validation = updateLinkSchema.safeParse(req.body);
     if (!validation.success) {

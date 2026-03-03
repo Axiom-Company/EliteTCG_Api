@@ -164,7 +164,7 @@ router.get('/channels', optionalCustomerAuth, async (req, res) => {
 });
 
 // POST /channels - create channel (admin only)
-router.post('/channels', authenticateSupabaseUser, requireRole('super_admin', 'admin'), async (req, res) => {
+router.post('/channels', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const validation = createChannelSchema.safeParse(req.body);
     if (!validation.success) {
@@ -213,7 +213,7 @@ router.post('/channels', authenticateSupabaseUser, requireRole('super_admin', 'a
 });
 
 // PUT /channels/:slug - update channel (admin only)
-router.put('/channels/:slug', authenticateSupabaseUser, requireRole('super_admin', 'admin'), async (req, res) => {
+router.put('/channels/:slug', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { slug } = req.params;
     const validation = updateChannelSchema.safeParse(req.body);
@@ -259,7 +259,7 @@ router.put('/channels/:slug', authenticateSupabaseUser, requireRole('super_admin
 });
 
 // DELETE /channels/:slug - delete channel (admin only)
-router.delete('/channels/:slug', authenticateSupabaseUser, requireRole('super_admin', 'admin'), async (req, res) => {
+router.delete('/channels/:slug', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { slug } = req.params;
 
@@ -412,8 +412,8 @@ router.get('/dm', authenticateCustomer, async (req, res) => {
         profileCache.set(conv.other_user_id, await getProfileInfo(conv.other_user_id));
       }
       dms.push({
-        channelSlug: conv.channel_id,
-        recipient: profileCache.get(conv.other_user_id),
+        channel_id: conv.channel_id,
+        other_user: profileCache.get(conv.other_user_id),
         last_message: conv.last_message,
         last_message_at: conv.last_message_at,
       });
@@ -533,7 +533,7 @@ router.delete('/dm/:channelId/messages/:msgId', authenticateCustomer, async (req
         .eq('id', userId)
         .single();
 
-      const isAdmin = profile && ['admin', 'super_admin'].includes(profile.role);
+      const isAdmin = profile?.role === 'admin';
       if (!isAdmin) {
         return res.status(403).json({ error: 'Not authorized to delete this message' });
       }
@@ -584,7 +584,7 @@ router.post('/dm/:channelId/upload', authenticateCustomer, dmUpload.single('imag
 // ============================================
 
 // POST /channels/:slug/mute/:userId - mute a user in a channel
-router.post('/channels/:slug/mute/:userId', authenticateSupabaseUser, requireRole('super_admin', 'admin'), async (req, res) => {
+router.post('/channels/:slug/mute/:userId', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { slug, userId } = req.params;
 
@@ -650,7 +650,7 @@ router.post('/channels/:slug/mute/:userId', authenticateSupabaseUser, requireRol
 });
 
 // POST /channels/:slug/unmute/:userId - unmute a user
-router.post('/channels/:slug/unmute/:userId', authenticateSupabaseUser, requireRole('super_admin', 'admin'), async (req, res) => {
+router.post('/channels/:slug/unmute/:userId', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { slug, userId } = req.params;
 
@@ -681,7 +681,7 @@ router.post('/channels/:slug/unmute/:userId', authenticateSupabaseUser, requireR
 });
 
 // POST /channels/:slug/ban/:userId - ban a user from a channel
-router.post('/channels/:slug/ban/:userId', authenticateSupabaseUser, requireRole('super_admin', 'admin'), async (req, res) => {
+router.post('/channels/:slug/ban/:userId', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { slug, userId } = req.params;
 
@@ -745,7 +745,7 @@ router.post('/channels/:slug/ban/:userId', authenticateSupabaseUser, requireRole
 });
 
 // POST /channels/:slug/unban/:userId - unban a user
-router.post('/channels/:slug/unban/:userId', authenticateSupabaseUser, requireRole('super_admin', 'admin'), async (req, res) => {
+router.post('/channels/:slug/unban/:userId', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { slug, userId } = req.params;
 

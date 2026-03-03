@@ -279,6 +279,16 @@ CREATE TABLE review_votes (
     UNIQUE(review_id, customer_id)
 );
 
+-- Review reports (flagged by users)
+CREATE TABLE review_reports (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    review_id UUID NOT NULL REFERENCES product_reviews(id) ON DELETE CASCADE,
+    reason VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_review_reports_review ON review_reports(review_id);
+
 -- ============================================
 -- 5. DISCUSSION FORUM
 -- ============================================

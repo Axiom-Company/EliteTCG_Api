@@ -86,9 +86,16 @@ router.post('/apply', authenticateCustomer, async (req, res) => {
 
     const { display_name, reason, experience, payfast_email, payfast_merchant_id } = validation.data;
 
-    // Check if already a seller
-    if (req.customer.is_seller) {
-      return res.status(400).json({ error: 'You are already a verified seller' });
+    // Check if already a seller via role
+    if (supabaseAdmin) {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('role')
+        .eq('id', req.customer.id)
+        .single();
+      if (profile && ['seller', 'verified_seller'].includes(profile.role)) {
+        return res.status(400).json({ error: 'You are already a verified seller' });
+      }
     }
 
     // Check if already has pending application

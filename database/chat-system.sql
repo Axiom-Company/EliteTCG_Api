@@ -57,30 +57,7 @@ CREATE INDEX IF NOT EXISTS idx_chat_members_channel ON chat_members(channel_id);
 CREATE INDEX IF NOT EXISTS idx_chat_members_user ON chat_members(user_id);
 
 -- ============================================
--- 3. CHAT DM MESSAGES (only DM conversations persisted)
--- ============================================
-
-CREATE TABLE IF NOT EXISTS chat_dm_messages (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    channel_id UUID NOT NULL REFERENCES chat_channels(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-    content TEXT NOT NULL CHECK (char_length(content) <= 2000),
-    image_url VARCHAR(500),
-    image_filename VARCHAR(255),
-    reply_to_id UUID REFERENCES chat_dm_messages(id) ON DELETE SET NULL,
-    is_edited BOOLEAN DEFAULT false,
-    edited_at TIMESTAMPTZ,
-    is_deleted BOOLEAN DEFAULT false,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_chat_dm_messages_channel_time
-    ON chat_dm_messages(channel_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_chat_dm_messages_user
-    ON chat_dm_messages(user_id);
-
--- ============================================
--- 4. CHAT PINNED MESSAGES (saved from public channels)
+-- 3. CHAT PINNED MESSAGES (saved from public channels)
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS chat_pinned_messages (
@@ -141,15 +118,12 @@ CREATE TRIGGER trigger_chat_member_count
 
 ALTER TABLE chat_channels ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_members ENABLE ROW LEVEL SECURITY;
-ALTER TABLE chat_dm_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_pinned_messages ENABLE ROW LEVEL SECURITY;
 
 -- Service role (API server) gets full access
 CREATE POLICY "service_role_chat_channels" ON chat_channels
     FOR ALL USING (auth.role() = 'service_role');
 CREATE POLICY "service_role_chat_members" ON chat_members
-    FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "service_role_chat_dm_messages" ON chat_dm_messages
     FOR ALL USING (auth.role() = 'service_role');
 CREATE POLICY "service_role_chat_pinned_messages" ON chat_pinned_messages
     FOR ALL USING (auth.role() = 'service_role');
@@ -158,53 +132,15 @@ CREATE POLICY "service_role_chat_pinned_messages" ON chat_pinned_messages
 CREATE POLICY "public_channels_visible" ON chat_channels
     FOR SELECT USING (channel_type = 'public' AND is_active = true);
 
--- DM channels visible to members only
-CREATE POLICY "dm_channels_visible_to_members" ON chat_channels
-    FOR SELECT USING (
-        channel_type = 'dm' AND
-        id IN (SELECT channel_id FROM chat_members WHERE user_id = auth.uid())
-    );
-
 -- Members visible to fellow channel members
 CREATE POLICY "members_visible_to_channel_members" ON chat_members
     FOR SELECT USING (
         channel_id IN (SELECT channel_id FROM chat_members WHERE user_id = auth.uid())
     );
 
--- DM messages visible to channel members
-CREATE POLICY "dm_messages_visible_to_members" ON chat_dm_messages
-    FOR SELECT USING (
-        channel_id IN (SELECT channel_id FROM chat_members WHERE user_id = auth.uid())
-    );
-
--- Users can send DM messages
-CREATE POLICY "users_can_send_dm" ON chat_dm_messages
-    FOR INSERT WITH CHECK (user_id = auth.uid());
-
--- Users can edit own DM messages
-CREATE POLICY "users_can_edit_own_dm" ON chat_dm_messages
-    FOR UPDATE USING (user_id = auth.uid());
-
 -- Pinned messages visible to all authenticated
 CREATE POLICY "pinned_visible_to_authenticated" ON chat_pinned_messages
     FOR SELECT USING (auth.role() = 'authenticated');
-
--- ============================================
--- DM CLEANUP: purge DMs older than 180 days
--- ============================================
-
-CREATE OR REPLACE FUNCTION purge_old_dm_messages(retention_days INTEGER DEFAULT 180)
-RETURNS INTEGER AS $$
-DECLARE
-    deleted_count INTEGER;
-BEGIN
-    DELETE FROM chat_dm_messages
-    WHERE created_at < NOW() - (retention_days || ' days')::INTERVAL
-      AND is_deleted = false;
-    GET DIAGNOSTICS deleted_count = ROW_COUNT;
-    RETURN deleted_count;
-END;
-$$ LANGUAGE plpgsql;
 
 -- ============================================
 -- SEED: Default public channels

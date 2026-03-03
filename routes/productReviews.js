@@ -42,9 +42,11 @@ const updateReviewSchema = z.object({
 router.get('/product/:productId', optionalCustomerAuth, async (req, res) => {
   try {
     const { productId } = req.params;
-    const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
-    const offset = (page - 1) * limit;
+    const offset = req.query.offset !== undefined
+      ? Math.max(0, parseInt(req.query.offset) || 0)
+      : (Math.max(1, parseInt(req.query.page) || 1) - 1) * limit;
+    const page = Math.floor(offset / limit) + 1;
     const { sort, rating } = req.query;
 
     let query = supabaseAdmin
@@ -407,6 +409,51 @@ router.delete('/:reviewId', authenticateCustomer, async (req, res) => {
   }
 });
 
+// POST helpful — increment helpful_count (anonymous, localStorage-deduplicated on client)
+router.post('/:id/helpful', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data: review, error: fetchErr } = await supabaseAdmin
+      .from('product_reviews')
+      .select('helpful_count')
+      .eq('id', id)
+      .single();
+
+    if (fetchErr || !review) return res.status(404).json({ error: 'Review not found' });
+
+    const newCount = (review.helpful_count || 0) + 1;
+    const { error } = await supabaseAdmin
+      .from('product_reviews')
+      .update({ helpful_count: newCount })
+      .eq('id', id);
+
+    if (error) throw error;
+    res.json({ helpful_count: newCount });
+  } catch (err) {
+    console.error('Helpful error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST report a review
+router.post('/:id/report', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    if (!reason) return res.status(400).json({ error: 'Reason is required' });
+
+    const { error } = await supabaseAdmin
+      .from('review_reports')
+      .insert({ review_id: id, reason });
+
+    if (error) throw error;
+    res.json({ message: 'Report submitted' });
+  } catch (err) {
+    console.error('Report error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Vote on review helpfulness
 router.post('/:reviewId/vote', authenticateCustomer, async (req, res) => {
   try {
@@ -528,6 +575,30 @@ router.get('/my-reviews', authenticateCustomer, async (req, res) => {
 // ============================================
 // ADMIN ENDPOINTS
 // ============================================
+
+// GET all reviews — admin dashboard (includes review_reports join)
+router.get('/', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
+  try {
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit) || 50));
+    const offset = Math.max(0, parseInt(req.query.offset) || 0);
+
+    const { data: reviews, error, count } = await supabaseAdmin
+      .from('product_reviews')
+      .select('id, name, email, rating, title, comment, helpful_count, created_at, product_id, is_approved, is_flagged, products(id, name, slug), review_reports(id, reason, created_at)', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      console.error('Admin reviews error:', error);
+      return res.status(500).json({ error: 'Failed to fetch reviews' });
+    }
+
+    res.json({ reviews: reviews || [] });
+  } catch (error) {
+    console.error('Admin reviews error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 // List all reviews (admin - includes flagged/unapproved)
 router.get('/admin/all', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {

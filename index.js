@@ -147,7 +147,7 @@ app.use('/api/portfolio', portfolioRoutes);
 app.use('/api/community/pull-rates', pullRateRoutes);
 app.use('/api/community/price-trends', priceTrendRoutes);
 app.use('/api/community/content', contentRoutes);
-app.use('/api/community/reviews', productReviewRoutes);
+app.use('/api/product-reviews', productReviewRoutes);
 app.use('/api/community/discussions', discussionRoutes);
 app.use('/api/community/discord', discordRoutes);
 app.use('/api/community/chat', chatRoutes);
