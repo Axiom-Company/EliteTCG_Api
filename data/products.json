@@ -1,0 +1,170 @@
+[
+  {
+    "id": "1769302501059",
+    "name": "Pokemon: Scarlet & Violet | Elite Trainer Box | Miraidon",
+    "slug": "pokemon-scarlet-violet-elite-trainer-box-miraidon",
+    "description": "Pokemon Scarlet &n Violet ushers in a new generation of Pokemon as Trainers embark on their Treasure Hunt through the Paldea region.\n\nLegendary battles await with the Pokemon TCG: Scarlet & Violet Elite Trainer Box – now with 9 boosters!. The Elite Trainer Box helps you tame the game and shift the tide in your favour.\n\nThe Pokemon TCG: Scarlet & Violet Elite Trainer Box includes:\n\n9 Pokemon TCG: Scarlet & Violet booster packs\n1 full-art foil promo card featuring Miraidon\n65 card sleeves featuring Miraidon\n45 Pokemon TCG Energy card\nA player's guide to the Scarlet & Violet expansion\n6 damage-counters\n1 competition-legal coin-flip die\n2 acrylic condition markers\nA collector's box to hold everything, with 4 dividers to keep it organized\nA code card usable in either the Pokemon TCG Online or Pokemon TCG Live\n",
+    "price": 1200,
+    "compare_at_price": 1500,
+    "currency": "ZAR",
+    "category": "etb",
+    "badge": "limited",
+    "set_id": "",
+    "is_active": true,
+    "is_featured": true,
+    "rating": 0,
+    "review_count": 0,
+    "images": [
+      "/uploads/product-1769302501052-405459313.webp"
+    ],
+    "sku": "",
+    "inventory": {
+      "quantity": 10,
+      "low_stock_threshold": 5
+    },
+    "created_at": "2026-01-25T00:55:01.059Z",
+    "updated_at": "2026-02-24T06:56:21.770Z",
+    "initial_quantity": 10,
+    "low_stock_threshold": 5
+  },
+  {
+    "id": "1769341168555",
+    "name": "Phantasmal Flames - Booster Pack",
+    "slug": "pok-mon-tcg-mega-evolution-phantasmal-flames-booster-pack",
+    "description": "Single Packs",
+    "price": 115,
+    "compare_at_price": 130,
+    "currency": "ZAR",
+    "category": "singles",
+    "badge": "none",
+    "set_id": "1769301256001",
+    "is_active": true,
+    "is_featured": true,
+    "rating": 0,
+    "review_count": 0,
+    "images": [
+      "/uploads/product-1771851209177-851209127.jpg"
+    ],
+    "sku": "",
+    "inventory": {
+      "quantity": 20,
+      "low_stock_threshold": 5
+    },
+    "created_at": "2026-01-25T11:39:28.555Z",
+    "updated_at": "2026-02-23T12:53:29.220Z",
+    "initial_quantity": 20,
+    "low_stock_threshold": 5
+  },
+  {
+    "id": "1771846981263",
+    "name": "Pokémon TCG: Mega Charizard X ex Ultra-Premium Collection",
+    "slug": "mega-charizard-ex-x-elite-trainer-box",
+    "description": "Ignite a Raging Inferno with Mega Charizard X ex! The immense power of Mega Evolution has brought forth the flickering blue flames of Mega Charizard X ex! This ferocious Mega Evolution Pokémon ex burns up Fire Energy to fuel its Inferno X attack, doing more damage for each card you discard. You’ll find Mega Charizard X ex here as a foil promo card, along with another foil promo card featuring Oricorio ex to help get more Fire Energy into play. Even more Pokémon await inside a stack of booster packs, and gameplay accessories like a playmat, deck box, and card sleeves let you show off amazing art of Mega Charizard X in action.",
+    "price": 3800,
+    "compare_at_price": null,
+    "currency": "ZAR",
+    "category": "etb",
+    "badge": "hot",
+    "set_id": "",
+    "is_active": true,
+    "is_featured": false,
+    "rating": 0,
+    "review_count": 0,
+    "images": [
+      "/uploads/product-1771846981233-245885134.webp"
+    ],
+    "sku": "",
+    "inventory": {
+      "quantity": 2,
+      "low_stock_threshold": 5
+    },
+    "created_at": "2026-02-23T11:43:01.263Z",
+    "updated_at": "2026-02-23T13:59:43.843Z",
+    "initial_quantity": 2,
+    "low_stock_threshold": 5
+  },
+  {
+    "id": "1772200000001",
+    "name": "Pokémon TCG: Mega Evolution — Ascended Heroes Elite Trainer Box",
+    "slug": "ascended-heroes-elite-trainer-box",
+    "description": "Rise to the challenge with the Ascended Heroes Elite Trainer Box! Featuring 9 booster packs from the Mega Evolution — Ascended Heroes expansion, a full-art foil promo card, 65 card sleeves, 45 Energy cards, damage counters, a competition-legal coin-flip die, condition markers, and a collector's box with dividers.",
+    "price": 1100,
+    "compare_at_price": 1350,
+    "currency": "ZAR",
+    "category": "etb",
+    "badge": "new",
+    "set_id": "",
+    "is_active": true,
+    "is_featured": true,
+    "rating": 0,
+    "review_count": 0,
+    "images": [
+      "/uploads/product1.png"
+    ],
+    "sku": "AH-ETB-001",
+    "inventory": {
+      "quantity": 15,
+      "low_stock_threshold": 5
+    },
+    "created_at": "2026-02-27T08:00:00.000Z",
+    "updated_at": "2026-02-27T08:00:00.000Z",
+    "initial_quantity": 15,
+    "low_stock_threshold": 5
+  },
+  {
+    "id": "1772200000002",
+    "name": "Pokémon TCG: Mega Evolution — Ascended Heroes 3-Pack Blister",
+    "slug": "ascended-heroes-3-pack-blister",
+    "description": "Grab 3 booster packs from the Mega Evolution — Ascended Heroes expansion along with a bonus foil promo card. A great way to expand your collection and hunt for powerful Mega Evolution Pokémon ex cards.",
+    "price": 280,
+    "compare_at_price": 350,
+    "currency": "ZAR",
+    "category": "booster_box",
+    "badge": "new",
+    "set_id": "",
+    "is_active": true,
+    "is_featured": true,
+    "rating": 0,
+    "review_count": 0,
+    "images": [
+      "/uploads/product2.png"
+    ],
+    "sku": "AH-3PK-001",
+    "inventory": {
+      "quantity": 30,
+      "low_stock_threshold": 5
+    },
+    "created_at": "2026-02-27T08:01:00.000Z",
+    "updated_at": "2026-02-27T08:01:00.000Z",
+    "initial_quantity": 30,
+    "low_stock_threshold": 5
+  },
+  {
+    "id": "1772200000003",
+    "name": "Pokémon TCG: Mega Evolution — Ascended Heroes Tech Sticker Collection",
+    "slug": "ascended-heroes-tech-sticker-collection",
+    "description": "The Ascended Heroes Tech Sticker Collection features 3 booster packs, a foil promo card, and a sheet of Pokémon tech stickers. Collect, trade, and stick your favourite Pokémon everywhere!",
+    "price": 320,
+    "compare_at_price": null,
+    "currency": "ZAR",
+    "category": "collection",
+    "badge": "hot",
+    "set_id": "",
+    "is_active": true,
+    "is_featured": true,
+    "rating": 0,
+    "review_count": 0,
+    "images": [
+      "/uploads/product3.png"
+    ],
+    "sku": "AH-TSC-001",
+    "inventory": {
+      "quantity": 20,
+      "low_stock_threshold": 5
+    },
+    "created_at": "2026-02-27T08:02:00.000Z",
+    "updated_at": "2026-02-27T08:02:00.000Z",
+    "initial_quantity": 20,
+    "low_stock_threshold": 5
+  }
+]

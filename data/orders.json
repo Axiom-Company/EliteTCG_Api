@@ -1,0 +1,34 @@
+[
+  {
+    "id": "051ac0a3-86a2-49da-8149-8cb5fff5a370",
+    "order_number": "ETS-MM705ULO-0570",
+    "customer_email": "rdreyer523@gmail.com",
+    "customer_name": "Ruben Dreyer",
+    "customer_phone": "+27729717922",
+    "shipping_address": {
+      "street_address": "15 Danie Theron Street",
+      "city": "Vanderbijlpark",
+      "province": "Gauteng",
+      "postal_code": "1911",
+      "country": "South Africa"
+    },
+    "items": [
+      {
+        "product_id": "1772200000003",
+        "product_name": "Pokémon TCG: Mega Evolution — Ascended Heroes Tech Sticker Collection",
+        "product_image": "/uploads/product3.png",
+        "quantity": 1,
+        "unit_price": 320,
+        "total": 320
+      }
+    ],
+    "subtotal": 320,
+    "shipping_amount": 100.38,
+    "shipping_method": "courier_guy",
+    "total_amount": 420.38,
+    "currency": "ZAR",
+    "status": "pending",
+    "payment_status": "pending",
+    "created_at": "2026-03-01T00:19:17.676Z"
+  }
+]

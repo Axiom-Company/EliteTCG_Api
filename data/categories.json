@@ -1,0 +1,62 @@
+[
+  {
+    "id": "1769335956943",
+    "name": "Booster Packs",
+    "slug": "booster_pack",
+    "description": "Single packs to hunt, hits, promos, and set staples",
+    "icon": "box",
+    "is_active": true,
+    "display_order": 1,
+    "image": "/uploads/product-1771847413025-594019191.jpg",
+    "created_at": "2026-01-25T10:12:36.943Z",
+    "updated_at": "2026-02-23T11:50:13.042Z"
+  },
+  {
+    "id": "1769336031339",
+    "name": "Booster Boxes",
+    "slug": "booster_box",
+    "description": "Factory-sealed displays for bulk pulls and value",
+    "icon": "box",
+    "is_active": true,
+    "display_order": 2,
+    "image": "/uploads/product-1771846853579-586890961.webp",
+    "created_at": "2026-01-25T10:13:51.339Z",
+    "updated_at": "2026-02-23T11:40:53.590Z"
+  },
+  {
+    "id": "1769336092769",
+    "name": "Elite Trainer Boxes",
+    "slug": "trainer_box",
+    "description": "Cards, Sleeves, and more-perfect for gifts",
+    "icon": "box",
+    "is_active": true,
+    "display_order": 3,
+    "image": "/uploads/product-1771846803169-658496389.webp",
+    "created_at": "2026-01-25T10:14:52.769Z",
+    "updated_at": "2026-02-23T11:40:03.182Z"
+  },
+  {
+    "id": "1769336156347",
+    "name": "Box Set",
+    "slug": "box_set",
+    "description": "Premium boxes with exclusive promo cards",
+    "icon": "box",
+    "is_active": true,
+    "display_order": 4,
+    "image": "/uploads/product-1771847673996-538139290.webp",
+    "created_at": "2026-01-25T10:15:56.347Z",
+    "updated_at": "2026-02-23T11:54:34.011Z"
+  },
+  {
+    "id": "1772369787745",
+    "name": "Pokemon Tins",
+    "slug": "tins",
+    "description": "",
+    "icon": "box",
+    "is_active": false,
+    "display_order": 5,
+    "image": "/uploads/product-1772369787729-507775553.png",
+    "created_at": "2026-03-01T12:56:27.745Z",
+    "updated_at": "2026-03-01T12:56:55.438Z"
+  }
+]
