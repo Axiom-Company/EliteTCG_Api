@@ -31,7 +31,7 @@ router.get('/product/:productId', async (req, res) => {
 
     const { data, error, count } = await supabaseAdmin
       .from('product_reviews')
-      .select('id, name, rating, title, comment, created_at', { count: 'exact' })
+      .select('id, name, rating, title, comment, created_at, helpful_count', { count: 'exact' })
       .eq('product_id', productId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -96,6 +96,50 @@ router.post('/product/:productId', async (req, res) => {
   }
 });
 
+// POST helpful — increment helpful_count
+router.post('/:id/helpful', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data: review, error: fetchErr } = await supabaseAdmin
+      .from('product_reviews')
+      .select('helpful_count')
+      .eq('id', id)
+      .single();
+
+    if (fetchErr || !review) return res.status(404).json({ error: 'Review not found' });
+
+    const { error } = await supabaseAdmin
+      .from('product_reviews')
+      .update({ helpful_count: (review.helpful_count || 0) + 1 })
+      .eq('id', id);
+
+    if (error) throw error;
+    res.json({ helpful_count: (review.helpful_count || 0) + 1 });
+  } catch (err) {
+    console.error('Helpful error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST report a review
+router.post('/:id/report', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    if (!reason) return res.status(400).json({ error: 'Reason is required' });
+
+    const { error } = await supabaseAdmin
+      .from('review_reports')
+      .insert({ review_id: id, reason });
+
+    if (error) throw error;
+    res.json({ message: 'Report submitted' });
+  } catch (err) {
+    console.error('Report error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // GET all reviews — admin only
 router.get('/', authenticateToken, async (req, res) => {
   try {
@@ -103,7 +147,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
     let query = supabaseAdmin
       .from('product_reviews')
-      .select('id, name, email, rating, comment, created_at, product_id, products(id, name, slug)', { count: 'exact' })
+      .select('id, name, email, rating, title, comment, helpful_count, created_at, product_id, products(id, name, slug), review_reports(id, reason, created_at)', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
 
