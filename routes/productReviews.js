@@ -22,18 +22,22 @@ const syncProductRating = async (productId) => {
     .eq('id', productId);
 };
 
-// GET reviews for a product (public)
+// GET reviews for a product (public) — paginated
 router.get('/product/:productId', async (req, res) => {
   try {
     const { productId } = req.params;
-    const { data, error } = await supabaseAdmin
+    const limit = Math.min(parseInt(req.query.limit) || 3, 50);
+    const offset = parseInt(req.query.offset) || 0;
+
+    const { data, error, count } = await supabaseAdmin
       .from('product_reviews')
-      .select('id, name, rating, title, comment, created_at')
+      .select('id, name, rating, title, comment, created_at', { count: 'exact' })
       .eq('product_id', productId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (error) throw error;
-    res.json({ reviews: data || [] });
+    res.json({ reviews: data || [], total: count || 0, hasMore: offset + limit < (count || 0) });
   } catch (err) {
     console.error('Get product reviews error:', err);
     res.status(500).json({ error: 'Server error' });
