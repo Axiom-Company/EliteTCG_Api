@@ -141,11 +141,11 @@ router.post('/', authenticateSupabaseUser, requireRole('admin'), async (req, res
       .insert({
         name: setData.name,
         code: setData.code || '',
-        release_date: setData.release_date || null,
+        release_date: setData.release_date || null, // empty string → null
         is_active: setData.is_active !== false,
         is_new: setData.is_new || false,
         display_order: (count || 0) + 1,
-        image: setData.image || null,
+        logo_url: setData.logo_url || setData.image || null,
       })
       .select()
       .single();
@@ -204,7 +204,13 @@ router.post('/', authenticateSupabaseUser, requireRole('admin'), async (req, res
 router.put('/:id', authenticateSupabaseUser, requireRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    const { image, ...rest } = req.body;
+    // Convert empty strings to null for date/nullable fields
+    const updates = Object.fromEntries(
+      Object.entries(rest).map(([k, v]) => [k, v === '' ? null : v])
+    );
+    // Map legacy 'image' field to correct column name
+    if (image) updates.logo_url = image;
 
     const { data, error } = await supabaseAdmin
       .from('sets')
