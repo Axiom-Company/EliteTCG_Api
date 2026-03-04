@@ -10,8 +10,23 @@ import {
   getUsdToZarRate,
   usdToZar,
 } from '../utils/pokemonTcgApi.js';
+import multer from 'multer';
 
 const router = Router();
+
+// Multer setup for card image scanning (memory storage, 5MB limit)
+const scanUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only JPEG, PNG, and WebP images are allowed'));
+    }
+  },
+});
 
 // ============================================
 // Validation Schemas
@@ -155,6 +170,118 @@ router.get('/sets', optionalCustomerAuth, async (req, res) => {
   } catch (error) {
     console.error('Get sets error:', error);
     res.status(500).json({ error: 'Failed to fetch sets' });
+  }
+});
+
+// Scan a card image using Google Cloud Vision OCR and search pokemontcg.io
+router.post('/scan', authenticateCustomer, (req, res, next) => {
+  scanUpload.single('card_image')(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ error: 'File size exceeds 5MB limit' });
+      }
+      return res.status(400).json({ error: err.message });
+    }
+    if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+    next();
+  });
+}, async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'card_image file is required' });
+    }
+
+    const apiKey = process.env.GOOGLE_CLOUD_VISION_API_KEY;
+    if (!apiKey) {
+      return res.status(503).json({ error: 'Card scan service unavailable' });
+    }
+
+    const base64 = req.file.buffer.toString('base64');
+
+    let visionResponse;
+    try {
+      visionResponse = await fetch(
+        `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            requests: [{
+              image: { content: base64 },
+              features: [{ type: 'TEXT_DETECTION' }],
+            }],
+          }),
+        }
+      );
+    } catch (_fetchErr) {
+      return res.status(503).json({ error: 'Card scan service unavailable' });
+    }
+
+    if (!visionResponse.ok) {
+      return res.status(503).json({ error: 'Card scan service unavailable' });
+    }
+
+    const visionData = await visionResponse.json();
+    const fullText =
+      visionData?.responses?.[0]?.textAnnotations?.[0]?.description || '';
+
+    if (!fullText.trim()) {
+      return res.status(400).json({
+        error: 'Could not read text from image. Ensure the card is clearly visible.',
+      });
+    }
+
+    // Extract card number pattern (e.g. 123/200, SV-001, TG15/TG30)
+    const numberMatch = fullText.match(
+      /\b(\w{0,3}\d{1,3}[a-z]?\s*\/\s*\d{1,4})\b/i
+    );
+    const detectedNumber = numberMatch ? numberMatch[1].replace(/\s/g, '') : null;
+
+    // Extract card name: look for lines before the HP line that look like a name
+    const lines = fullText.split('\n').map(l => l.trim()).filter(Boolean);
+    let detectedName = null;
+
+    for (const line of lines) {
+      // Skip lines that are clearly not a card name
+      if (/\d{1,3}\s*\/\s*\d{1,4}/.test(line)) continue; // card number line
+      if (/^\d+\s*HP$/i.test(line)) break;                // HP line means name is above
+      if (/^HP\s*\d+/i.test(line)) break;                 // alternate HP format
+
+      // A Pokemon name is typically 2-20 chars, title case or all caps, mostly letters
+      const cleaned = line.replace(/[^a-zA-Z\s\-'.:]/g, '').trim();
+      if (cleaned.length >= 2 && cleaned.length <= 20 && /^[A-Za-z\s\-'.]+$/.test(cleaned)) {
+        detectedName = cleaned;
+        break;
+      }
+    }
+
+    // Build search query
+    const q = detectedName || lines.find(l => l.length >= 2 && l.length <= 40) || fullText.substring(0, 40);
+
+    const result = await searchCards({ query: q, page: 1, pageSize: 10 });
+
+    const rate = await getUsdToZarRate();
+    const cards = result.cards.map(c => ({
+      ...c,
+      price_market_zar: usdToZar(c.price_market, rate),
+      price_low_zar: usdToZar(c.price_low, rate),
+      price_mid_zar: usdToZar(c.price_mid, rate),
+      price_high_zar: usdToZar(c.price_high, rate),
+      usd_to_zar_rate: rate,
+    }));
+
+    res.json({
+      ocr_text: fullText,
+      detected_name: detectedName,
+      detected_number: detectedNumber,
+      cards,
+      total: cards.length,
+    });
+  } catch (error) {
+    console.error('Card scan error:', error);
+    res.status(500).json({ error: 'Failed to scan card' });
   }
 });
 
