@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
     const [productsRes, setsRes, categoriesRes] = await Promise.all([
       supabaseAdmin
         .from('products')
-        .select('id, name, slug, price, compare_at_price, images, category')
+        .select('id, name, slug, price, compare_at_price, images, category, badge, inventory(quantity, low_stock_threshold)')
         .ilike('name', pattern)
         .eq('is_active', true)
         .limit(n),
@@ -35,8 +35,15 @@ router.get('/', async (req, res) => {
         .limit(n),
     ]);
 
+    const products = (productsRes.data || []).map(p => {
+      const inv = Array.isArray(p.inventory)
+        ? (p.inventory[0] || { quantity: 0, low_stock_threshold: 5 })
+        : (p.inventory || { quantity: 0, low_stock_threshold: 5 });
+      return { ...p, inventory: inv };
+    });
+
     res.json({
-      products:   productsRes.data   || [],
+      products,
       sets:       setsRes.data       || [],
       categories: categoriesRes.data || [],
     });

@@ -222,6 +222,73 @@ router.get('/set/:setId', optionalCustomerAuth, async (req, res) => {
   }
 });
 
+// Create an anonymous review for a product (public — no auth required)
+router.post('/product/:productId', async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { name, email, rating, title, comment } = req.body;
+
+    // Validate required fields
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+    if (!rating || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be 1-5' });
+    }
+
+    // Verify product exists
+    const { data: product, error: productErr } = await supabaseAdmin
+      .from('products')
+      .select('id')
+      .eq('id', productId)
+      .single();
+
+    if (productErr || !product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    const { data: review, error } = await supabaseAdmin
+      .from('product_reviews')
+      .insert({
+        product_id: productId,
+        name: name.trim(),
+        email: email?.trim() || null,
+        rating,
+        title: title?.trim() || null,
+        comment: comment?.trim() || null,
+        is_approved: true,
+        is_verified_purchase: false,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Create anonymous review error:', error);
+      return res.status(500).json({ error: 'Failed to create review' });
+    }
+
+    // Update product average rating
+    const { data: allRatings } = await supabaseAdmin
+      .from('product_reviews')
+      .select('rating')
+      .eq('product_id', productId)
+      .eq('is_approved', true);
+
+    if (allRatings && allRatings.length > 0) {
+      const avgRating = parseFloat((allRatings.reduce((s, r) => s + r.rating, 0) / allRatings.length).toFixed(1));
+      await supabaseAdmin
+        .from('products')
+        .update({ rating: avgRating, review_count: allRatings.length })
+        .eq('id', productId);
+    }
+
+    res.status(201).json({ message: 'Review submitted', review });
+  } catch (error) {
+    console.error('Create anonymous review error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ============================================
 // AUTHENTICATED ENDPOINTS
 // ============================================
