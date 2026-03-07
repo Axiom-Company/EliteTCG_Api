@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import PayFast from '../utils/payfast.js';
+import { sendNewOrderNotification, sendOrderConfirmation } from '../utils/email.js';
 
 const router = express.Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -132,6 +133,8 @@ router.post('/direct', async (req, res) => {
       subtotal: parseFloat(subtotal.toFixed(2)),
       shipping_amount: shippingCost,
       shipping_method: shipping.method || 'courier_guy',
+      shipping_service: shipping.service_name || null,
+      estimated_delivery_days: shipping.estimated_days || null,
       total_amount: totalAmount,
       currency: 'ZAR',
       status: 'pending',
@@ -152,11 +155,164 @@ router.post('/direct', async (req, res) => {
         order_number: order.order_number,
         total_amount: order.total_amount,
       },
-      payment_url: PayFast.buildPaymentUrl(paymentData),
+      payfast_url: PayFast.url,
       payment_data: paymentData,
     });
   } catch (err) {
     console.error('Checkout error:', err);
+    res.status(500).json({ detail: 'Internal server error' });
+  }
+});
+
+// ── Confirm payment (called from success page as fallback for ITN) ──────────
+
+router.post('/confirm/:orderId', (req, res) => {
+  try {
+    const orders = loadOrders();
+    const idx = orders.findIndex(o => o.id === req.params.orderId);
+    if (idx === -1) return res.status(404).json({ detail: 'Order not found' });
+
+    const order = orders[idx];
+
+    // Only confirm if still pending (ITN may have already confirmed)
+    if (order.status === 'pending') {
+      orders[idx] = {
+        ...order,
+        status: 'paid',
+        payment_status: 'completed',
+        paid_at: new Date().toISOString(),
+      };
+      saveOrders(orders);
+
+      // Send emails
+      sendOrderConfirmation(
+        order.customer_email,
+        order.customer_name,
+        order.order_number,
+        order.total_amount,
+        order.items
+      ).catch(err => console.error('Failed to send order confirmation:', err));
+
+      sendNewOrderNotification(
+        order.order_number,
+        order.customer_name,
+        order.total_amount,
+        order.items?.length || 0
+      ).catch(err => console.error('Failed to send admin notification:', err));
+    }
+
+    const confirmed = orders[idx];
+    res.json({
+      status: confirmed.status,
+      order_number: confirmed.order_number,
+      customer_name: confirmed.customer_name || '',
+      total_amount: confirmed.total_amount,
+      subtotal: confirmed.subtotal,
+      shipping_amount: confirmed.shipping_amount,
+      shipping_service: confirmed.shipping_service || null,
+      estimated_delivery_days: confirmed.estimated_delivery_days || null,
+      items: (confirmed.items || []).map(item => ({
+        product_name: item.product_name,
+        product_image: item.product_image || null,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total: item.total,
+      })),
+      created_at: confirmed.created_at,
+      paid_at: confirmed.paid_at || null,
+    });
+  } catch (err) {
+    console.error('Confirm order error:', err);
+    res.status(500).json({ detail: 'Internal server error' });
+  }
+});
+
+// ── Order Tracking (public, no auth) ────────────────────────────────────────
+
+router.get('/track/:orderNumber', (req, res) => {
+  try {
+    const { orderNumber } = req.params;
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({ detail: 'Email is required' });
+    }
+
+    const orders = loadOrders();
+    const order = orders.find(
+      o => o.order_number === orderNumber && o.customer_email?.toLowerCase() === email.toLowerCase()
+    );
+
+    if (!order) {
+      return res.status(404).json({ detail: 'Order not found — check your order number and email' });
+    }
+
+    // Return safe subset (no internal notes, payment IDs, etc.)
+    res.json({
+      order_number: order.order_number,
+      status: order.status,
+      payment_status: order.payment_status,
+      total_amount: order.total_amount,
+      subtotal: order.subtotal,
+      shipping_amount: order.shipping_amount,
+      tracking_number: order.tracking_number || null,
+      items: (order.items || []).map(item => ({
+        product_name: item.product_name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total: item.total,
+      })),
+      created_at: order.created_at,
+    });
+  } catch (err) {
+    console.error('Track order error:', err);
+    res.status(500).json({ detail: 'Internal server error' });
+  }
+});
+
+// ── My Orders (fetch all orders for an email) ───────────────────────────────
+
+router.get('/my-orders', (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email) return res.status(400).json({ detail: 'Email is required' });
+
+    const orders = loadOrders();
+    const userOrders = orders
+      .filter(o => o.customer_email?.toLowerCase() === email.toLowerCase())
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .map(o => ({
+        id: o.id,
+        order_number: o.order_number,
+        customer_name: o.customer_name || '',
+        status: o.status,
+        payment_status: o.payment_status,
+        total_amount: o.total_amount,
+        subtotal: o.subtotal,
+        shipping_amount: o.shipping_amount,
+        shipping_method: o.shipping_method || null,
+        shipping_service: o.shipping_service || null,
+        shipping_address: o.shipping_address || null,
+        estimated_delivery_days: o.estimated_delivery_days || null,
+        tracking_number: o.tracking_number || null,
+        paid_at: o.paid_at || null,
+        shipped_at: o.shipped_at || null,
+        delivered_at: o.delivered_at || null,
+        cancelled_at: o.cancelled_at || null,
+        items: (o.items || []).map(item => ({
+          product_id: item.product_id || null,
+          product_name: item.product_name,
+          product_image: item.product_image || null,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total: item.total,
+        })),
+        created_at: o.created_at,
+      }));
+
+    res.json({ orders: userOrders });
+  } catch (err) {
+    console.error('My orders error:', err);
     res.status(500).json({ detail: 'Internal server error' });
   }
 });
