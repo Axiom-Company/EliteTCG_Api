@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { optionalCustomerAuth, authenticateCustomer } from '../middleware/auth.js';
 import PayFast from '../utils/payfast.js';
+import { sendOrderConfirmation, sendNewOrderNotification } from '../utils/email.js';
 
 const router = Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -355,6 +356,23 @@ router.post('/notify', async (req, res) => {
       saveOrders(orders);
 
       console.log('Payment completed for store order:', order.order_number);
+
+      // Send confirmation email to customer
+      sendOrderConfirmation(
+        order.customer_email,
+        order.customer_name,
+        order.order_number,
+        order.total_amount,
+        order.items
+      ).catch(err => console.error('Failed to send order confirmation:', err));
+
+      // Notify admin of new paid order
+      sendNewOrderNotification(
+        order.order_number,
+        order.customer_name,
+        order.total_amount,
+        order.items?.length || 0
+      ).catch(err => console.error('Failed to send admin notification:', err));
     } else if (paymentStatus === 'CANCELLED') {
       orders[orderIndex] = {
         ...order,

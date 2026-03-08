@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { authenticateSupabaseUser } from '../middleware/auth.js';
+import { sendShippingNotification } from '../utils/email.js';
 
 const router = express.Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -22,6 +23,38 @@ function loadOrders() {
 
 function saveOrders(orders) {
   fs.writeFileSync(ordersFilePath, JSON.stringify(orders, null, 2));
+}
+
+/**
+ * Normalize internal order format to the shape the admin frontend expects.
+ */
+function normalizeOrder(o) {
+  const addr = o.shipping_address || {};
+  return {
+    ...o,
+    // Field aliases the admin frontend reads
+    guest_name: o.customer_name,
+    guest_email: o.customer_email,
+    order_status: o.status,
+    total_zar: o.total_amount,
+    subtotal_zar: o.subtotal,
+    shipping_cost_zar: o.shipping_amount,
+    courier_tracking_number: o.tracking_number || null,
+    courier_booking_reference: o.booking_reference || null,
+    seller_notes: o.notes || '',
+    shipping_address_line1: addr.street_address || '',
+    shipping_address_line2: addr.apartment || '',
+    shipping_city: addr.city || '',
+    shipping_province: addr.province || '',
+    shipping_postal_code: addr.postal_code || '',
+    // Normalize items
+    items: (o.items || []).map(item => ({
+      ...item,
+      unit_price_zar: item.unit_price,
+      line_total_zar: item.total || (item.unit_price * item.quantity),
+      photo_url: item.product_image || null,
+    })),
+  };
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
@@ -167,7 +200,15 @@ router.get('/orders/admin', (req, res) => {
   const limitNum = parseInt(limit);
   const paginated = orders.slice((pageNum - 1) * limitNum, pageNum * limitNum);
 
-  res.json({ orders: paginated, total, page: pageNum, pages: Math.ceil(total / limitNum) });
+  res.json({
+    items: paginated.map(normalizeOrder),
+    orders: paginated.map(normalizeOrder),
+    total,
+    total_count: total,
+    total_pages: Math.ceil(total / limitNum),
+    page: pageNum,
+    pages: Math.ceil(total / limitNum),
+  });
 });
 
 /**
@@ -196,7 +237,7 @@ router.get('/orders/admin/:id', (req, res) => {
   const orders = loadOrders();
   const order = orders.find(o => o.id === req.params.id);
   if (!order) return res.status(404).json({ detail: 'Order not found' });
-  res.json(order);
+  res.json(normalizeOrder(order));
 });
 
 /**
@@ -238,7 +279,18 @@ router.put('/orders/admin/:id/status', (req, res) => {
   if (idx === -1) return res.status(404).json({ detail: 'Order not found' });
   orders[idx] = { ...orders[idx], status, updated_at: new Date().toISOString() };
   saveOrders(orders);
-  res.json(orders[idx]);
+
+  // Send shipping email when marked as shipped with tracking
+  if (status === 'shipped' && orders[idx].tracking_number) {
+    sendShippingNotification(
+      orders[idx].customer_email,
+      orders[idx].customer_name,
+      orders[idx].order_number,
+      orders[idx].tracking_number
+    ).catch(err => console.error('Failed to send shipping email:', err));
+  }
+
+  res.json(normalizeOrder(orders[idx]));
 });
 
 /**
@@ -278,9 +330,23 @@ router.put('/orders/admin/:id/tracking', (req, res) => {
   const orders = loadOrders();
   const idx = orders.findIndex(o => o.id === req.params.id);
   if (idx === -1) return res.status(404).json({ detail: 'Order not found' });
-  orders[idx] = { ...orders[idx], tracking_number, updated_at: new Date().toISOString() };
+  orders[idx] = {
+    ...orders[idx],
+    tracking_number,
+    status: 'shipped',
+    updated_at: new Date().toISOString(),
+  };
   saveOrders(orders);
-  res.json(orders[idx]);
+
+  // Send shipping notification email
+  sendShippingNotification(
+    orders[idx].customer_email,
+    orders[idx].customer_name,
+    orders[idx].order_number,
+    tracking_number
+  ).catch(err => console.error('Failed to send shipping email:', err));
+
+  res.json(normalizeOrder(orders[idx]));
 });
 
 /**
@@ -322,7 +388,7 @@ router.put('/orders/admin/:id/notes', (req, res) => {
   if (idx === -1) return res.status(404).json({ detail: 'Order not found' });
   orders[idx] = { ...orders[idx], notes, updated_at: new Date().toISOString() };
   saveOrders(orders);
-  res.json(orders[idx]);
+  res.json(normalizeOrder(orders[idx]));
 });
 
 export default router;

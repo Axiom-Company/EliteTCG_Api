@@ -30,5 +30,460 @@
     "status": "pending",
     "payment_status": "pending",
     "created_at": "2026-03-01T00:19:17.676Z"
+  },
+  {
+    "id": "c4a6c3fa-856a-469b-ad04-e42f3ad5dea4",
+    "order_number": "ETS-MMEITRDX-DBJ0",
+    "customer_email": "admin@elitetcg.co.za",
+    "customer_phone": "",
+    "shipping_address": {
+      "street_address": "15 Danie Theron Street",
+      "city": "Vanderbijlpark",
+      "province": "Gauteng",
+      "postal_code": "1911",
+      "country": "South Africa"
+    },
+    "items": [
+      {
+        "product_id": "376d1ddb-3c64-40c4-9b91-c49df4d10de4",
+        "product_image": null,
+        "quantity": 1,
+        "total": null
+      }
+    ],
+    "subtotal": null,
+    "shipping_amount": 0,
+    "shipping_method": "courier_guy",
+    "total_amount": null,
+    "currency": "ZAR",
+    "status": "pending",
+    "payment_status": "pending",
+    "created_at": "2026-03-06T06:36:09.573Z"
+  },
+  {
+    "id": "58cffa87-37e4-46aa-aa1d-c2dd950c639a",
+    "order_number": "ETS-MMEIZDTT-XS98",
+    "customer_email": "admin@elitetcg.co.za",
+    "customer_name": "Ruben Dreyer",
+    "customer_phone": "",
+    "shipping_address": {
+      "street_address": "15 Danie Theron Street",
+      "city": "Vanderbijlpark",
+      "province": "Gauteng",
+      "postal_code": "1911",
+      "country": "South Africa"
+    },
+    "items": [
+      {
+        "product_id": "376d1ddb-3c64-40c4-9b91-c49df4d10de4",
+        "product_name": "Iono #124 (Pokemon Promo)",
+        "product_image": "https://vqtgpgbifsiokmvwgubh.supabase.co/storage/v1/object/public/images/products/1772778014338-548219184.jpg",
+        "quantity": 1,
+        "unit_price": 224.99,
+        "total": 224.99
+      }
+    ],
+    "subtotal": 224.99,
+    "shipping_amount": 99,
+    "shipping_method": "courier_guy",
+    "total_amount": 323.99,
+    "currency": "ZAR",
+    "status": "pending",
+    "payment_status": "pending",
+    "created_at": "2026-03-06T06:40:31.937Z"
+  },
+  {
+    "id": "4a529316-b760-45b7-85c6-80e2076f7074",
+    "order_number": "ETS-MMEJCSWD-RK8G",
+    "customer_email": "admin@elitetcg.co.za",
+    "customer_name": "Ruben Dreyer",
+    "customer_phone": "",
+    "shipping_address": {
+      "street_address": "15 Danie Theron Street",
+      "city": "Vanderbijlpark",
+      "province": "Gauteng",
+      "postal_code": "1911",
+      "country": "South Africa"
+    },
+    "items": [
+      {
+        "product_id": "376d1ddb-3c64-40c4-9b91-c49df4d10de4",
+        "product_name": "Iono #124 (Pokemon Promo)",
+        "product_image": "https://vqtgpgbifsiokmvwgubh.supabase.co/storage/v1/object/public/images/products/1772778014338-548219184.jpg",
+        "quantity": 1,
+        "unit_price": 224.99,
+        "total": 224.99
+      }
+    ],
+    "subtotal": 224.99,
+    "shipping_amount": 99,
+    "shipping_method": "courier_guy",
+    "total_amount": 323.99,
+    "currency": "ZAR",
+    "status": "pending",
+    "payment_status": "pending",
+    "created_at": "2026-03-06T06:50:57.997Z"
+  },
+  {
+    "id": "bf0aa3cd-7b29-4481-a698-9978538b9441",
+    "order_number": "ETS-MMEJFQ38-QZRA",
+    "customer_email": "admin@elitetcg.co.za",
+    "customer_name": "Ruben Dreyer",
+    "customer_phone": "",
+    "shipping_address": {
+      "street_address": "15 Danie Theron Street",
+      "city": "Vanderbijlpark",
+      "province": "Gauteng",
+      "postal_code": "1911",
+      "country": "South Africa"
+    },
+    "items": [
+      {
+        "product_id": "376d1ddb-3c64-40c4-9b91-c49df4d10de4",
+        "product_name": "Iono #124 (Pokemon Promo)",
+        "product_image": "https://vqtgpgbifsiokmvwgubh.supabase.co/storage/v1/object/public/images/products/1772778014338-548219184.jpg",
+        "quantity": 1,
+        "unit_price": 224.99,
+        "total": 224.99
+      }
+    ],
+    "subtotal": 224.99,
+    "shipping_amount": 99,
+    "shipping_method": "courier_guy",
+    "total_amount": 323.99,
+    "currency": "ZAR",
+    "status": "pending",
+    "payment_status": "pending",
+    "created_at": "2026-03-06T06:53:14.324Z"
+  },
+  {
+    "id": "ee8f6985-e8c4-459f-aa13-5f5ceeb915da",
+    "order_number": "ETS-MMEJIYAP-LCOB",
+    "customer_email": "admin@elitetcg.co.za",
+    "customer_name": "Ruben Dreyer",
+    "customer_phone": "",
+    "shipping_address": {
+      "street_address": "15 Danie Theron Street",
+      "city": "Vanderbijlpark",
+      "province": "Gauteng",
+      "postal_code": "1911",
+      "country": "South Africa"
+    },
+    "items": [
+      {
+        "product_id": "376d1ddb-3c64-40c4-9b91-c49df4d10de4",
+        "product_name": "Iono #124 (Pokemon Promo)",
+        "product_image": "https://vqtgpgbifsiokmvwgubh.supabase.co/storage/v1/object/public/images/products/1772778014338-548219184.jpg",
+        "quantity": 1,
+        "unit_price": 224.99,
+        "total": 224.99
+      }
+    ],
+    "subtotal": 224.99,
+    "shipping_amount": 99,
+    "shipping_method": "courier_guy",
+    "total_amount": 323.99,
+    "currency": "ZAR",
+    "status": "pending",
+    "payment_status": "pending",
+    "created_at": "2026-03-06T06:55:44.929Z"
+  },
+  {
+    "id": "194e183a-b78d-4c02-a7ef-0f046d37914c",
+    "order_number": "ETS-MMEJQH2L-AVIV",
+    "customer_email": "admin@elitetcg.co.za",
+    "customer_name": "Ruben Dreyer",
+    "customer_phone": "",
+    "shipping_address": {
+      "street_address": "15 Danie Theron Street",
+      "city": "Vanderbijlpark",
+      "province": "Gauteng",
+      "postal_code": "1911",
+      "country": "South Africa"
+    },
+    "items": [
+      {
+        "product_id": "376d1ddb-3c64-40c4-9b91-c49df4d10de4",
+        "product_name": "Iono #124 (Pokemon Promo)",
+        "product_image": "https://vqtgpgbifsiokmvwgubh.supabase.co/storage/v1/object/public/images/products/1772778014338-548219184.jpg",
+        "quantity": 1,
+        "unit_price": 224.99,
+        "total": 224.99
+      }
+    ],
+    "subtotal": 224.99,
+    "shipping_amount": 99,
+    "shipping_method": "courier_guy",
+    "total_amount": 323.99,
+    "currency": "ZAR",
+    "status": "pending",
+    "payment_status": "pending",
+    "created_at": "2026-03-06T07:01:35.853Z"
+  },
+  {
+    "id": "3c9cf185-2854-40f0-87d5-1fffd68c2b4a",
+    "order_number": "ETS-MMEJSRBL-98A4",
+    "customer_email": "admin@elitetcg.co.za",
+    "customer_name": "Ruben Dreyer",
+    "customer_phone": "",
+    "shipping_address": {
+      "street_address": "15 Danie Theron Street",
+      "city": "Vanderbijlpark",
+      "province": "Gauteng",
+      "postal_code": "1911",
+      "country": "South Africa"
+    },
+    "items": [
+      {
+        "product_id": "376d1ddb-3c64-40c4-9b91-c49df4d10de4",
+        "product_name": "Iono #124 (Pokemon Promo)",
+        "product_image": "https://vqtgpgbifsiokmvwgubh.supabase.co/storage/v1/object/public/images/products/1772778014338-548219184.jpg",
+        "quantity": 1,
+        "unit_price": 224.99,
+        "total": 224.99
+      }
+    ],
+    "subtotal": 224.99,
+    "shipping_amount": 99,
+    "shipping_method": "courier_guy",
+    "total_amount": 323.99,
+    "currency": "ZAR",
+    "status": "pending",
+    "payment_status": "pending",
+    "created_at": "2026-03-06T07:03:22.449Z"
+  },
+  {
+    "id": "5018209d-541b-443b-944b-2d6e36919f44",
+    "order_number": "ETS-MMEKIFFE-8J8Q",
+    "customer_email": "admin@elitetcg.co.za",
+    "customer_name": "Ruben Dreyer",
+    "customer_phone": "",
+    "shipping_address": {
+      "street_address": "15 Danie Theron Street",
+      "city": "Vanderbijlpark",
+      "province": "Gauteng",
+      "postal_code": "1911",
+      "country": "South Africa"
+    },
+    "items": [
+      {
+        "product_id": "376d1ddb-3c64-40c4-9b91-c49df4d10de4",
+        "product_name": "Iono #124 (Pokemon Promo)",
+        "product_image": "https://vqtgpgbifsiokmvwgubh.supabase.co/storage/v1/object/public/images/products/1772778014338-548219184.jpg",
+        "quantity": 1,
+        "unit_price": 224.99,
+        "total": 224.99
+      }
+    ],
+    "subtotal": 224.99,
+    "shipping_amount": 99,
+    "shipping_method": "courier_guy",
+    "total_amount": 323.99,
+    "currency": "ZAR",
+    "status": "pending",
+    "payment_status": "pending",
+    "created_at": "2026-03-06T07:23:20.090Z"
+  },
+  {
+    "id": "f53dd18f-7e51-4084-9226-98740cc77880",
+    "order_number": "ETS-MMEKRD59-D96B",
+    "customer_email": "admin@elitetcg.co.za",
+    "customer_name": "Ruben Dreyer",
+    "customer_phone": "",
+    "shipping_address": {
+      "street_address": "15 Danie Theron Street",
+      "city": "Vanderbijlpark",
+      "province": "Gauteng",
+      "postal_code": "1911",
+      "country": "South Africa"
+    },
+    "items": [
+      {
+        "product_id": "376d1ddb-3c64-40c4-9b91-c49df4d10de4",
+        "product_name": "Iono #124 (Pokemon Promo)",
+        "product_image": "https://vqtgpgbifsiokmvwgubh.supabase.co/storage/v1/object/public/images/products/1772778014338-548219184.jpg",
+        "quantity": 1,
+        "unit_price": 224.99,
+        "total": 224.99
+      }
+    ],
+    "subtotal": 224.99,
+    "shipping_amount": 104.94,
+    "shipping_method": "courier_guy",
+    "total_amount": 329.93,
+    "currency": "ZAR",
+    "status": "pending",
+    "payment_status": "pending",
+    "created_at": "2026-03-06T07:30:17.037Z"
+  },
+  {
+    "id": "d684b5e2-67c4-42e5-b79b-d153833fbeac",
+    "order_number": "ETS-MMEL2P6H-AU1A",
+    "customer_email": "admin@elitetcg.co.za",
+    "customer_name": "Ruben Dreyer",
+    "customer_phone": "",
+    "shipping_address": {
+      "street_address": "15 Danie Theron Street",
+      "city": "Vanderbijlpark",
+      "province": "Gauteng",
+      "postal_code": "1911",
+      "country": "South Africa"
+    },
+    "items": [
+      {
+        "product_id": "376d1ddb-3c64-40c4-9b91-c49df4d10de4",
+        "product_name": "Iono #124 (Pokemon Promo)",
+        "product_image": "https://vqtgpgbifsiokmvwgubh.supabase.co/storage/v1/object/public/images/products/1772778014338-548219184.jpg",
+        "quantity": 1,
+        "unit_price": 224.99,
+        "total": 224.99
+      }
+    ],
+    "subtotal": 224.99,
+    "shipping_amount": 104.94,
+    "shipping_method": "courier_guy",
+    "total_amount": 329.93,
+    "currency": "ZAR",
+    "status": "pending",
+    "payment_status": "pending",
+    "created_at": "2026-03-06T07:39:05.850Z"
+  },
+  {
+    "id": "5207e07c-728f-46c9-886c-a24ef450bbfc",
+    "order_number": "ETS-MMEL7ZLV-N3GP",
+    "customer_email": "admin@elitetcg.co.za",
+    "customer_name": "Ruben Dreyer",
+    "customer_phone": "",
+    "shipping_address": {
+      "street_address": "15 Danie Theron Street",
+      "city": "Vanderbijlpark",
+      "province": "Gauteng",
+      "postal_code": "1911",
+      "country": "South Africa"
+    },
+    "items": [
+      {
+        "product_id": "376d1ddb-3c64-40c4-9b91-c49df4d10de4",
+        "product_name": "Iono #124 (Pokemon Promo)",
+        "product_image": "https://vqtgpgbifsiokmvwgubh.supabase.co/storage/v1/object/public/images/products/1772778014338-548219184.jpg",
+        "quantity": 1,
+        "unit_price": 224.99,
+        "total": 224.99
+      }
+    ],
+    "subtotal": 224.99,
+    "shipping_amount": 104.94,
+    "shipping_method": "courier_guy",
+    "total_amount": 329.93,
+    "currency": "ZAR",
+    "status": "paid",
+    "payment_status": "completed",
+    "created_at": "2026-03-06T07:43:12.643Z",
+    "paid_at": "2026-03-06T07:43:47.362Z"
+  },
+  {
+    "id": "ab3f25af-9034-4273-960b-bb876468a2a8",
+    "order_number": "ETS-MMETIDTP-14XU",
+    "customer_email": "admin@elitetcg.co.za",
+    "customer_name": "Ruben Dreyer",
+    "customer_phone": "",
+    "shipping_address": {
+      "street_address": "15 Danie Theron Street",
+      "city": "Vanderbijlpark",
+      "province": "Gauteng",
+      "postal_code": "1911",
+      "country": "South Africa"
+    },
+    "items": [
+      {
+        "product_id": "376d1ddb-3c64-40c4-9b91-c49df4d10de4",
+        "product_name": "Iono #124 (Pokemon Promo)",
+        "product_image": "https://vqtgpgbifsiokmvwgubh.supabase.co/storage/v1/object/public/images/products/1772778014338-548219184.jpg",
+        "quantity": 1,
+        "unit_price": 224.99,
+        "total": 224.99
+      }
+    ],
+    "subtotal": 224.99,
+    "shipping_amount": 104.94,
+    "shipping_method": "courier_guy",
+    "shipping_service": "Standard Delivery",
+    "estimated_delivery_days": 3,
+    "total_amount": 329.93,
+    "currency": "ZAR",
+    "status": "paid",
+    "payment_status": "completed",
+    "created_at": "2026-03-06T11:35:14.558Z",
+    "paid_at": "2026-03-06T11:35:40.113Z"
+  },
+  {
+    "id": "5ec6e117-ea06-46ef-af5a-85e5df118031",
+    "order_number": "ETS-MMETVMNL-UJTM",
+    "customer_email": "admin@elitetcg.co.za",
+    "customer_name": "Ruben Dreyer",
+    "customer_phone": "",
+    "shipping_address": {
+      "street_address": "15 Danie Theron Street",
+      "city": "Vanderbijlpark",
+      "province": "Gauteng",
+      "postal_code": "1911",
+      "country": "South Africa"
+    },
+    "items": [
+      {
+        "product_id": "376d1ddb-3c64-40c4-9b91-c49df4d10de4",
+        "product_name": "Iono #124 (Pokemon Promo)",
+        "product_image": "https://vqtgpgbifsiokmvwgubh.supabase.co/storage/v1/object/public/images/products/1772778014338-548219184.jpg",
+        "quantity": 3,
+        "unit_price": 224.99,
+        "total": 674.97
+      }
+    ],
+    "subtotal": 674.97,
+    "shipping_amount": 104.94,
+    "shipping_method": "courier_guy",
+    "shipping_service": "Standard Delivery",
+    "estimated_delivery_days": 3,
+    "total_amount": 779.91,
+    "currency": "ZAR",
+    "status": "paid",
+    "payment_status": "completed",
+    "created_at": "2026-03-06T11:45:32.529Z",
+    "paid_at": "2026-03-06T11:45:52.892Z"
+  },
+  {
+    "id": "1f3c58ce-b80e-4b01-905c-f54b9a2c6490",
+    "order_number": "ETS-MMETYNLQ-CAOG",
+    "customer_email": "admin@elitetcg.co.za",
+    "customer_name": "Ruben Dreyer",
+    "customer_phone": "",
+    "shipping_address": {
+      "street_address": "15 Danie Theron Street",
+      "city": "Vanderbijlpark",
+      "province": "Gauteng",
+      "postal_code": "1911",
+      "country": "South Africa"
+    },
+    "items": [
+      {
+        "product_id": "376d1ddb-3c64-40c4-9b91-c49df4d10de4",
+        "product_name": "Iono #124 (Pokemon Promo)",
+        "product_image": "https://vqtgpgbifsiokmvwgubh.supabase.co/storage/v1/object/public/images/products/1772778014338-548219184.jpg",
+        "quantity": 1,
+        "unit_price": 224.99,
+        "total": 224.99
+      }
+    ],
+    "subtotal": 224.99,
+    "shipping_amount": 104.94,
+    "shipping_method": "courier_guy",
+    "shipping_service": "Standard Delivery",
+    "estimated_delivery_days": 3,
+    "total_amount": 329.93,
+    "currency": "ZAR",
+    "status": "paid",
+    "payment_status": "completed",
+    "created_at": "2026-03-06T11:47:53.726Z",
+    "paid_at": "2026-03-06T11:49:10.202Z"
   }
 ]

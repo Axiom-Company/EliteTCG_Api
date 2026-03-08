@@ -24,7 +24,9 @@ async function sendEmail(toEmail, toName, subject, htmlBody) {
       },
       body: JSON.stringify({
         from: { address: fromEmail, name: fromName },
-        to: [{ email_address: { address: toEmail, name: toName || '' } }],
+        to: toEmail.includes(',')
+        ? toEmail.split(',').map(e => ({ email_address: { address: e.trim(), name: toName || '' } }))
+        : [{ email_address: { address: toEmail, name: toName || '' } }],
         subject,
         htmlbody: htmlBody,
       }),
@@ -80,6 +82,23 @@ export async function sendOrderCancelled(toEmail, toName, orderNumber) {
     <p>If you didn't request this, please contact us.</p>`);
 
   await sendEmail(toEmail, toName, `Order Cancelled — ${orderNumber}`, html);
+}
+
+// ── Admin notification ──
+
+export async function sendNewOrderNotification(orderNumber, customerName, totalZar, itemCount) {
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.ZEPTOMAIL_FROM_EMAIL || 'admin@elitetcg.co.za';
+  const html = wrap(`
+    <h2 style="color:#1a1a2e">New Order Received — ${orderNumber}</h2>
+    <table style="border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:6px 12px;color:#888">Customer</td><td style="padding:6px 12px;font-weight:bold">${customerName || 'Guest'}</td></tr>
+      <tr><td style="padding:6px 12px;color:#888">Items</td><td style="padding:6px 12px">${itemCount}</td></tr>
+      <tr><td style="padding:6px 12px;color:#888">Total</td><td style="padding:6px 12px;font-weight:bold;color:#16a34a">R${totalZar.toFixed(2)}</td></tr>
+    </table>
+    <p>Log in to the admin dashboard to pack and ship this order.</p>
+    <p>${btn('https://www.elitetcg.co.za/admin/orders', 'View Orders')}</p>`);
+
+  await sendEmail(adminEmail, 'Elite TCG Admin', `New Order — ${orderNumber} (R${totalZar.toFixed(2)})`, html);
 }
 
 // ── Seller emails ──
@@ -232,6 +251,7 @@ export async function sendSubscriptionPaymentFailed(toEmail, toName, subscriptio
 export default {
   sendEmail,
   sendOrderConfirmation,
+  sendNewOrderNotification,
   sendShippingNotification,
   sendOrderCancelled,
   sendSellerSaleNotification,

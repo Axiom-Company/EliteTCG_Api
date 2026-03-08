@@ -292,6 +292,14 @@ router.put('/:id', authenticateSupabaseUser, requireRole('admin'), async (req, r
     // Strip inventory/quantity fields — those go through the inventory endpoint
     const { initial_quantity, low_stock_threshold, inventory, ...productUpdates } = req.body;
 
+    // Convert empty strings to null for UUID columns so Postgres doesn't reject them
+    const uuidFields = ['set_id', 'seller_id', 'category_id'];
+    for (const field of uuidFields) {
+      if (field in productUpdates && !productUpdates[field]) {
+        productUpdates[field] = null;
+      }
+    }
+
     const { data, error } = await supabaseAdmin
       .from('products')
       .update({ ...productUpdates, updated_at: new Date().toISOString() })

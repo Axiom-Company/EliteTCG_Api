@@ -1,6 +1,13 @@
 import express from 'express';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { authenticateSupabaseUser } from '../middleware/auth.js';
+import { sendShippingNotification } from '../utils/email.js';
 
 const router = express.Router();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ordersFilePath = path.join(__dirname, '..', 'data', 'orders.json');
 
 // Both sandbox and live use the same API URL.
 // Sandbox vs live is determined by which API key you use
@@ -150,6 +157,150 @@ router.post('/quote', async (req, res) => {
 
   } catch (err) {
     console.error('Shipping quote error:', err);
+    res.status(500).json({ detail: 'Internal server error' });
+  }
+});
+
+/**
+ * @openapi
+ * /v1/shipping/admin/book:
+ *   post:
+ *     tags: [Shipping]
+ *     summary: Book a Courier Guy shipment for an order (admin)
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [order_id]
+ *             properties:
+ *               order_id:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Shipment booked with tracking number
+ *       404:
+ *         description: Order not found
+ *       500:
+ *         description: Server error
+ */
+router.post('/admin/book', authenticateSupabaseUser, async (req, res) => {
+  try {
+    const { order_id } = req.body;
+
+    if (!API_KEY) {
+      return res.status(500).json({ detail: 'Courier Guy API key not configured' });
+    }
+
+    // Load order
+    let orders;
+    try {
+      orders = JSON.parse(fs.readFileSync(ordersFilePath, 'utf-8'));
+    } catch {
+      orders = [];
+    }
+    const idx = orders.findIndex(o => o.id === order_id);
+    if (idx === -1) return res.status(404).json({ detail: 'Order not found' });
+
+    const order = orders[idx];
+    const addr = order.shipping_address || {};
+
+    // Map province to zone code
+    const ZONE_MAP = {
+      'Gauteng': 'GP', 'Western Cape': 'WC', 'KwaZulu-Natal': 'KZN',
+      'Eastern Cape': 'EC', 'Free State': 'FS', 'Limpopo': 'LP',
+      'Mpumalanga': 'MP', 'North West': 'NW', 'Northern Cape': 'NC',
+    };
+    const zone = ZONE_MAP[addr.province] || 'GP';
+
+    // Calculate total weight (estimate 0.5kg per item)
+    const totalItems = (order.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
+    const weightKg = Math.max(1, totalItems * 0.5);
+
+    // Create shipment via Ship Logic API
+    const shipmentPayload = {
+      collection_address: SENDER,
+      delivery_address: {
+        type: 'residential',
+        company: '',
+        street_address: addr.street_address || addr.address_line1 || '',
+        local_area: addr.city || '',
+        city: addr.city || '',
+        code: addr.postal_code || '',
+        zone,
+        country_code: 'ZA',
+      },
+      parcels: [{
+        parcel_description: `EliteTCG Order ${order.order_number}`,
+        submitted_length_cm: 30,
+        submitted_width_cm: 25,
+        submitted_height_cm: 20,
+        submitted_weight_kg: weightKg,
+      }],
+      declared_value: order.total_amount || 500,
+      collection_min_date: new Date().toISOString().slice(0, 10),
+      delivery_min_date: new Date().toISOString().slice(0, 10),
+      customer_reference: order.order_number,
+      special_instructions_collection: `Order ${order.order_number}`,
+      special_instructions_delivery: order.customer_name ? `Deliver to ${order.customer_name}` : '',
+    };
+
+    console.log('Booking Courier Guy shipment for order:', order.order_number);
+    const response = await fetch(`${BASE_URL}/shipments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_KEY}`,
+      },
+      body: JSON.stringify(shipmentPayload),
+    });
+
+    if (!response.ok) {
+      const raw = await response.text();
+      console.error('Courier Guy booking error:', response.status, raw.slice(0, 500));
+      let error = {};
+      try { error = JSON.parse(raw); } catch {}
+      return res.status(response.status).json({
+        detail: error.message || error.detail || 'Failed to book courier',
+      });
+    }
+
+    const shipment = await response.json();
+    const trackingNumber = shipment.tracking_reference || shipment.short_tracking_reference || '';
+    const bookingReference = shipment.id || shipment.reference || '';
+
+    // Update order with tracking info
+    orders[idx] = {
+      ...order,
+      tracking_number: trackingNumber,
+      booking_reference: bookingReference,
+      status: 'shipped',
+      updated_at: new Date().toISOString(),
+    };
+    fs.writeFileSync(ordersFilePath, JSON.stringify(orders, null, 2));
+
+    // Send shipping notification email
+    if (trackingNumber) {
+      sendShippingNotification(
+        order.customer_email,
+        order.customer_name,
+        order.order_number,
+        trackingNumber
+      ).catch(err => console.error('Failed to send shipping email:', err));
+    }
+
+    console.log('Courier booked:', { trackingNumber, bookingReference });
+    res.json({
+      tracking_number: trackingNumber,
+      booking_reference: bookingReference,
+      shipment_id: shipment.id,
+    });
+
+  } catch (err) {
+    console.error('Courier booking error:', err);
     res.status(500).json({ detail: 'Internal server error' });
   }
 });

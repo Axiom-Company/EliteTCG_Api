@@ -50,6 +50,19 @@ const PAYFAST_IPS = [
 ];
 
 /**
+ * PHP-compatible urlencode (matches PayFast's server-side encoding)
+ */
+function phpUrlencode(str) {
+  return encodeURIComponent(String(str))
+    .replace(/!/g, '%21')
+    .replace(/'/g, '%27')
+    .replace(/\(/g, '%28')
+    .replace(/\)/g, '%29')
+    .replace(/\*/g, '%2A')
+    .replace(/%20/g, '+');
+}
+
+/**
  * Generate MD5 signature for PayFast
  */
 function generateSignature(data, passphrase = null) {
@@ -57,11 +70,11 @@ function generateSignature(data, passphrase = null) {
   const params = Object.keys(data)
     .filter(key => data[key] !== '' && data[key] !== null && data[key] !== undefined)
     .sort()
-    .map(key => `${key}=${encodeURIComponent(String(data[key])).replace(/%20/g, '+')}`)
+    .map(key => `${key}=${phpUrlencode(data[key])}`)
     .join('&');
 
   // Add passphrase if provided
-  const signatureString = passphrase ? `${params}&passphrase=${encodeURIComponent(passphrase)}` : params;
+  const signatureString = passphrase ? `${params}&passphrase=${phpUrlencode(passphrase)}` : params;
 
   return crypto.createHash('md5').update(signatureString).digest('hex');
 }
@@ -171,6 +184,16 @@ function buildPaymentUrl(paymentData) {
 }
 
 /**
+ * Remove empty/null/undefined values from an object so they don't
+ * appear in the form POST or cause signature mismatches.
+ */
+function stripEmpty(obj) {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== '' && v !== null && v !== undefined)
+  );
+}
+
+/**
  * Generate payment data for store orders (not marketplace)
  */
 function generateStorePaymentData(order, buyer) {
@@ -178,34 +201,27 @@ function generateStorePaymentData(order, buyer) {
   const storeCancelUrl = process.env.PAYFAST_STORE_CANCEL_URL || 'https://www.elitetcg.co.za/payment/cancel';
   const storeNotifyUrl = process.env.PAYFAST_STORE_NOTIFY_URL || 'http://localhost:3001/api/orders/notify';
 
-  const data = {
-    // Merchant details
+  const cellNumber = (buyer.phone || '').replace(/\D/g, '');
+
+  const data = stripEmpty({
     merchant_id: PAYFAST_CONFIG.merchantId,
     merchant_key: PAYFAST_CONFIG.merchantKey,
-
-    // Return URLs (different from marketplace)
     return_url: storeReturnUrl,
     cancel_url: storeCancelUrl,
     notify_url: storeNotifyUrl,
-
-    // Buyer details
     name_first: buyer.first_name || 'Customer',
     name_last: buyer.last_name || '',
     email_address: buyer.email,
-    cell_number: buyer.phone?.replace(/\D/g, '') || '',
-
-    // Transaction details
+    cell_number: cellNumber || '',
     m_payment_id: order.id,
     amount: order.total_amount.toFixed(2),
     item_name: `EliteTCG Order #${order.order_number}`.substring(0, 100),
     item_description: `${order.items?.length || 0} item(s)`.substring(0, 255),
-
-    // Custom data
     custom_str1: order.order_number,
-    custom_str2: 'store_order' // Distinguish from marketplace orders
-  };
+    custom_str2: 'store_order',
+  });
 
-  // Generate signature
+  // Generate signature — must be last, computed from the cleaned data
   data.signature = generateSignature(data, PAYFAST_CONFIG.passphrase);
 
   return data;
