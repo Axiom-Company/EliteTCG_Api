@@ -51,6 +51,8 @@ import portfolioRoutes from './routes/portfolio.js';
 import chatRoutes from './routes/chat.js';
 import bannerRoutes from './routes/banners.js';
 import searchRoutes from './routes/search.js';
+import packRoutes from './routes/packs.js';
+import pageAccessRoutes from './routes/pageAccess.js';
 import { supabaseAdmin } from './config/supabase.js';
 import { createDailySnapshots, refreshStalePrices } from './utils/portfolioJobs.js';
 import { initChatSocket } from './chat/chatSocket.js';
@@ -209,6 +211,8 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/admin/subscriptions', adminSubscriptionRoutes);
 app.use('/api/v1', adminApiRoutes);
 app.use('/api/portfolio', portfolioRoutes);
+app.use('/api/packs', packRoutes);
+app.use('/api/page-access', pageAccessRoutes);
 
 // Community Hub Routes
 app.use('/api/community/pull-rates', pullRateRoutes);

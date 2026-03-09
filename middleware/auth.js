@@ -139,10 +139,50 @@ export const requireSeller = async (req, res, next) => {
   }
 };
 
+// ── Page access check (requires authenticateCustomer first) ──
+
+export const requirePageAccess = (pagePath) => {
+  return async (req, res, next) => {
+    if (!req.customer) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    if (!supabaseAdmin) return next();
+
+    try {
+      // Check if page has any rules at all
+      const { data: rules } = await supabaseAdmin
+        .from('page_access')
+        .select('id')
+        .eq('page_path', pagePath)
+        .limit(1);
+
+      // No rules = open to everyone
+      if (!rules || rules.length === 0) return next();
+
+      // Check if user has access
+      const { data: access } = await supabaseAdmin
+        .from('page_access')
+        .select('id')
+        .eq('page_path', pagePath)
+        .eq('user_email', req.customer.email)
+        .limit(1);
+
+      if (access && access.length > 0) return next();
+
+      return res.status(403).json({ error: 'You do not have access to this feature' });
+    } catch (err) {
+      console.error('[PageAccess] middleware error:', err);
+      return res.status(500).json({ error: 'Server error' });
+    }
+  };
+};
+
 export default {
   authenticateSupabaseUser,
   requireRole,
   authenticateCustomer,
   optionalCustomerAuth,
-  requireSeller
+  requireSeller,
+  requirePageAccess
 };
