@@ -114,6 +114,44 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   lastModified: true,
 }));
 
+// Dynamic sitemap with all products, sets, and categories
+app.get('/api/sitemap.xml', async (req, res) => {
+  try {
+    const [productsRes, setsRes, catsRes] = await Promise.all([
+      supabaseAdmin.from('products').select('slug,id,updated_at').eq('status', 'active'),
+      supabaseAdmin.from('sets').select('id,updated_at'),
+      supabaseAdmin.from('categories').select('slug,updated_at'),
+    ]);
+    const base = 'https://www.elitetcg.co.za';
+    const staticPages = [
+      { loc: '/', freq: 'daily', pri: '1.0' },
+      { loc: '/products', freq: 'daily', pri: '0.9' },
+      { loc: '/sets', freq: 'weekly', pri: '0.8' },
+      { loc: '/search', freq: 'weekly', pri: '0.5' },
+      { loc: '/terms-of-service', freq: 'yearly', pri: '0.3' },
+      { loc: '/privacy-policy', freq: 'yearly', pri: '0.3' },
+      { loc: '/refund-policy', freq: 'yearly', pri: '0.3' },
+    ];
+    const urls = staticPages.map(p => `<url><loc>${base}${p.loc}</loc><changefreq>${p.freq}</changefreq><priority>${p.pri}</priority></url>`);
+    for (const p of productsRes.data || []) {
+      urls.push(`<url><loc>${base}/product/${p.slug || p.id}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>`);
+    }
+    for (const s of setsRes.data || []) {
+      urls.push(`<url><loc>${base}/sets/${s.id}</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>`);
+    }
+    for (const c of catsRes.data || []) {
+      urls.push(`<url><loc>${base}/categories/${c.slug}</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>`);
+    }
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>`;
+    res.set('Content-Type', 'application/xml');
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.send(xml);
+  } catch (err) {
+    console.error('Sitemap error:', err);
+    res.status(500).end();
+  }
+});
+
 // Proxy Supabase images through our domain for Cloudflare CDN caching
 app.get('/api/img/*', async (req, res) => {
   const imgPath = req.params[0];
