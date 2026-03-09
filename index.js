@@ -106,8 +106,29 @@ app.use('/api/customer/register', authLimiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded product images
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Serve uploaded product images with aggressive caching
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  maxAge: '30d',
+  immutable: true,
+  etag: true,
+  lastModified: true,
+}));
+
+// Proxy Supabase images through our domain for Cloudflare CDN caching
+app.get('/api/img/*', async (req, res) => {
+  const imgPath = req.params[0];
+  const supabaseUrl = `https://vqtgpgbifsiokmvwgubh.supabase.co/storage/v1/object/public/${imgPath}`;
+  try {
+    const upstream = await fetch(supabaseUrl);
+    if (!upstream.ok) return res.status(upstream.status).end();
+    res.set('Content-Type', upstream.headers.get('content-type') || 'image/webp');
+    res.set('Cache-Control', 'public, max-age=2592000, immutable');
+    const buffer = Buffer.from(await upstream.arrayBuffer());
+    res.send(buffer);
+  } catch {
+    res.status(502).end();
+  }
+});
 
 // Swagger docs
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
