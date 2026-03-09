@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import PayFast from '../utils/payfast.js';
+import payflex from '../utils/payflex.js';
 import { sendNewOrderNotification, sendOrderConfirmation } from '../utils/email.js';
 
 const router = express.Router();
@@ -95,10 +96,32 @@ function generateOrderNumber() {
  */
 router.post('/direct', async (req, res) => {
   try {
-    const { items, customer, shipping } = req.body;
+    const { items, customer, shipping, payment_provider = 'payfast', turnstile_token } = req.body;
 
     if (!items?.length || !customer?.email || !shipping?.address_line1) {
       return res.status(400).json({ detail: 'items, customer.email and shipping.address_line1 are required' });
+    }
+
+    // Verify Cloudflare Turnstile
+    const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
+    if (turnstileSecret) {
+      if (!turnstile_token) {
+        return res.status(400).json({ detail: 'Security verification required' });
+      }
+      try {
+        const cfRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ secret: turnstileSecret, response: turnstile_token }),
+        });
+        const cfData = await cfRes.json();
+        if (!cfData.success) {
+          return res.status(403).json({ detail: 'Security verification failed — please try again' });
+        }
+      } catch (err) {
+        console.error('[Turnstile] Verification error:', err.message);
+        // Allow through if Turnstile is down — don't block legitimate orders
+      }
     }
 
     const subtotal = items.reduce((sum, item) => sum + (item.unit_price_zar * item.quantity), 0);
@@ -147,6 +170,39 @@ router.post('/direct', async (req, res) => {
     saveOrders(orders);
 
     const buyer = { first_name: firstName, last_name: lastName, email: customer.email, phone: customer.phone || '' };
+
+    // Payflex flow: create order then redirect to Payflex hosted page
+    if (payment_provider === 'payflex' && payflex.isConfigured) {
+      try {
+        const baseUrl = process.env.PAYFLEX_BASE_URL || process.env.FRONTEND_URL || 'https://www.elitetcg.co.za';
+        const apiBaseUrl = process.env.API_BASE_URL || `${req.protocol}://${req.get('host')}`;
+
+        const result = await payflex.createOrder({
+          order,
+          customer: { email: customer.email, full_name: customer.full_name, phone: customer.phone },
+          redirectUrl: `${baseUrl}/payment/success?provider=payflex&order=${order.order_number}`,
+          callbackUrl: `${apiBaseUrl}/api/payflex/webhook`,
+        });
+
+        // Save Payflex refs
+        const idx2 = orders.findIndex(o => o.id === order.id);
+        orders[idx2].payflex_order_id = result.orderId || result.token;
+        orders[idx2].payflex_token = result.token;
+        orders[idx2].payment_provider = 'payflex';
+        saveOrders(orders);
+
+        return res.json({
+          order: { id: order.id, order_number: order.order_number, total_amount: order.total_amount },
+          payment_provider: 'payflex',
+          payflex_redirect_url: result.redirectUrl,
+        });
+      } catch (err) {
+        console.error('[Checkout] Payflex failed, falling back to PayFast:', err.message);
+        // Fall through to PayFast
+      }
+    }
+
+    // PayFast flow (default)
     const paymentData = PayFast.generateStorePaymentData(order, buyer);
 
     return res.json({
@@ -155,6 +211,7 @@ router.post('/direct', async (req, res) => {
         order_number: order.order_number,
         total_amount: order.total_amount,
       },
+      payment_provider: 'payfast',
       payfast_url: PayFast.url,
       payment_data: paymentData,
     });
