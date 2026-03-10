@@ -50,13 +50,14 @@ export async function searchCards({ query, setCode, rarity, supertype, page = 1,
   }
 
   const q = parts.length ? `q=${encodeURIComponent(parts.join(' '))}` : '';
-  const url = `${POKEMON_TCG_BASE}/cards?${q}&page=${page}&pageSize=${pageSize}&orderBy=-set.releaseDate`;
+  const params = [q, `page=${page}`, `pageSize=${pageSize}`, `orderBy=-set.releaseDate`].filter(Boolean).join('&');
+  const url = `${POKEMON_TCG_BASE}/cards?${params}`;
 
-  const res = await fetch(url, { headers: headers() });
+  const res = await fetch(url, { headers: headers(), signal: AbortSignal.timeout(15000) });
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`pokemontcg.io API error ${res.status}: ${text}`);
+    const text = await res.text().catch(() => '');
+    throw new Error(`pokemontcg.io API error ${res.status}: ${text.slice(0, 200)}`);
   }
 
   const json = await res.json();
@@ -102,12 +103,13 @@ export async function getSets({ query, page = 1, pageSize = 50 } = {}) {
     q = `q=${encodeURIComponent(`name:"*${query}*"`)}`;
   }
 
-  const url = `${POKEMON_TCG_BASE}/sets?${q}&page=${page}&pageSize=${pageSize}&orderBy=-releaseDate`;
-  const res = await fetch(url, { headers: headers() });
+  const params = [q, `page=${page}`, `pageSize=${pageSize}`, `orderBy=-releaseDate`].filter(Boolean).join('&');
+  const url = `${POKEMON_TCG_BASE}/sets?${params}`;
+  const res = await fetch(url, { headers: headers(), signal: AbortSignal.timeout(15000) });
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`pokemontcg.io API error ${res.status}: ${text}`);
+    const text = await res.text().catch(() => '');
+    throw new Error(`pokemontcg.io API error ${res.status}: ${text.slice(0, 200)}`);
   }
 
   const json = await res.json();

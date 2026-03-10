@@ -27,6 +27,8 @@ const TCGDEX_BASE = 'https://api.tcgdex.net/v2/en';
 
 // Map our set IDs (used in frontend) to TCGdex set IDs
 const SET_ID_MAP = {
+  'me02pt5': 'me02.5', 'me02': 'me02', 'me01': 'me01',
+  'sv10pt5b': 'sv10.5b', 'sv10pt5w': 'sv10.5w', 'sv10': 'sv10',
   'sv9': 'sv09', 'sv8pt5': 'sv08.5', 'sv8': 'sv08', 'sv7': 'sv07',
   'sv6pt5': 'sv06.5', 'sv6': 'sv06', 'sv5': 'sv05', 'sv4pt5': 'sv04.5',
   'sv4': 'sv04', 'sv3pt5': 'sv03.5', 'sv3': 'sv03', 'sv2': 'sv02', 'sv1': 'sv01',
@@ -66,7 +68,7 @@ async function getEurToZar() {
 
 // ── Card cache ───────────────────────────────────────────────────────────────
 const cardCache = new Map();      // ourSetId → { cards, timestamp }
-const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 const priceCache = new Map();     // tcgdexCardId → { priceEur, timestamp }
 const PRICE_CACHE_TTL = 30 * 60 * 1000; // 30 min
 
@@ -90,22 +92,19 @@ async function getSetCards(ourSetId) {
 
     if (rawCards.length === 0) throw new Error('No cards in set');
 
-    // Fetch ALL individual cards for rarity data (batched, 20 concurrent)
+    // Fetch ALL individual cards for rarity data (batched, 50 concurrent)
     const rarityMap = new Map(); // localId → rarity
-    const batchSize = 20;
+    const batchSize = 50;
     console.log(`[Packs] Fetching rarity for ${rawCards.length} cards in ${tcgdexId}...`);
 
-    for (let b = 0; b < rawCards.length; b += batchSize) {
-      const batch = rawCards.slice(b, b + batchSize);
-      const results = await Promise.allSettled(
-        batch.map(c => tcgdexFetch(`/cards/${c.id}`))
-      );
-      results.forEach((r) => {
-        if (r.status === 'fulfilled' && r.value) {
-          rarityMap.set(r.value.localId, r.value.rarity || 'Common');
-        }
-      });
-    }
+    const allResults = await Promise.allSettled(
+      rawCards.map(c => tcgdexFetch(`/cards/${c.id}`))
+    );
+    allResults.forEach((r) => {
+      if (r.status === 'fulfilled' && r.value) {
+        rarityMap.set(r.value.localId, r.value.rarity || 'Common');
+      }
+    });
 
     // Build card list with real rarity
     const cards = rawCards.map((c) => {
@@ -117,8 +116,8 @@ async function getSetCards(ourSetId) {
         set_code: ourSetId,
         card_number: c.localId,
         rarity,
-        card_image_small: c.image ? `${c.image}/high.webp` : `https://images.pokemontcg.io/${ourSetId}/${c.localId}.png`,
-        card_image_large: c.image ? `${c.image}/high.webp` : `https://images.pokemontcg.io/${ourSetId}/${c.localId}_hires.png`,
+        card_image_small: c.image ? `${c.image}/high.png` : `https://images.pokemontcg.io/${ourSetId}/${c.localId}.png`,
+        card_image_large: c.image ? `${c.image}/high.png` : `https://images.pokemontcg.io/${ourSetId}/${c.localId}_hires.png`,
         artist: null,
       };
     });
