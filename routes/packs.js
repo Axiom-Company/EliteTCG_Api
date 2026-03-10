@@ -286,6 +286,19 @@ const SLOT_WEIGHTS = [
 const CARDS_PER_PACK = 8;
 const RARITY_ORDER = { common: 0, uncommon: 1, rare: 2, ultra_rare: 3 };
 
+// Admin boosted weights — mostly ultra rares
+const ADMIN_EMAILS = ['admin@elitetcg.co.za'];
+const ADMIN_SLOT_WEIGHTS = [
+  [{ rarity: 'uncommon', weight: 50 }, { rarity: 'rare', weight: 50 }],       // slot 1
+  [{ rarity: 'uncommon', weight: 50 }, { rarity: 'rare', weight: 50 }],       // slot 2
+  [{ rarity: 'rare', weight: 60 }, { rarity: 'ultra_rare', weight: 40 }],     // slot 3
+  [{ rarity: 'rare', weight: 60 }, { rarity: 'ultra_rare', weight: 40 }],     // slot 4
+  [{ rarity: 'rare', weight: 40 }, { rarity: 'ultra_rare', weight: 60 }],     // slot 5
+  [{ rarity: 'rare', weight: 40 }, { rarity: 'ultra_rare', weight: 60 }],     // slot 6
+  [{ rarity: 'ultra_rare', weight: 100 }],                                     // slot 7
+  [{ rarity: 'ultra_rare', weight: 100 }],                                     // slot 8
+];
+
 // ── Routes ───────────────────────────────────────────────────────────────────
 
 router.get('/seed', optionalCustomerAuth, (req, res) => {
@@ -358,9 +371,12 @@ router.post('/open', authenticateCustomer, requirePageAccess('/elite-rips'), asy
     // Pick cards — no duplicates within a pack (increment sub-nonce to re-roll)
     const usedCardIds = new Set();
     const packCards = [];
+    const isAdmin = ADMIN_EMAILS.includes(req.customer?.email);
+    const weights = isAdmin ? ADMIN_SLOT_WEIGHTS : SLOT_WEIGHTS;
+    if (isAdmin) console.log('[Packs] Admin luck boost active for', req.customer.email);
 
     for (let i = 0; i < CARDS_PER_PACK; i++) {
-      const rarity = rollToRarity(rolls[i], SLOT_WEIGHTS[i]);
+      const rarity = rollToRarity(rolls[i], weights[i]);
       const bucket = buckets[rarity];
 
       let card = null;
